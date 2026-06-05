@@ -335,7 +335,7 @@ def _speak_male_offline(text, output_path):
 # 统计服务器相关
 # ═══════════════════════════════════════════
 
-CLIPLEARN_VERSION = "1.0.0"
+CLIPLEARN_VERSION = "1.0.1"
 CLIPLEARN_SERVER = os.environ.get("CLIPLEARN_SERVER", "https://stats.cliplearn.ai")
 
 
