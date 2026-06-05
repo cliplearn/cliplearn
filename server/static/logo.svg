@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 40">
+  <!-- 圆形 CL 图标 -->
+  <circle cx="18" cy="20" r="18" fill="#fff"/>
+  <path d="M20 10 C11 7, 5 14, 7 22 C8 27, 13 31, 20 30"
+        stroke="#B71C1C" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+  <path d="M20 12 L20 30 L27 30"
+        stroke="#0D47A1" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- ClipLearn 文本 -->
+  <text x="44" y="30" font-family="Segoe UI, system-ui, sans-serif" font-size="27" font-weight="700" font-style="italic">
+    <tspan fill="#B71C1C">C</tspan><tspan fill="#34A853">lip</tspan><tspan fill="#0D47A1">L</tspan><tspan fill="#34A853">earn</tspan>
+  </text>
+</svg>

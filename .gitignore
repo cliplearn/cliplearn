@@ -1,0 +1,38 @@
+# ─── Python ───
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# ─── Node.js ───
+node_modules/
+
+# ─── Electron ───
+out/
+
+# ─── 本地运行时数据（每个用户独立生成，不应入库） ───
+cliplearn.db
+clip_audios/
+
+# ─── IDE / 编辑器 ───
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ─── 系统文件 ───
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ─── Claude / AI 工具 ───
+.claude/
+
+# ─── 日志 ───
+*.log
+npm-debug.log*

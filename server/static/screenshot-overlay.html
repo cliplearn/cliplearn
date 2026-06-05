@@ -1,0 +1,108 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; overflow:hidden; background:transparent; }
+body {
+    cursor:crosshair; user-select:none;
+}
+#mask {
+    position:fixed; top:0; left:0; width:100%; height:100%;
+    background:rgba(0,0,0,0.4);
+}
+#sel {
+    position:fixed; border:2px dashed #116cc7;
+    background:rgba(17,108,199,0.08);
+    display:none;
+}
+</style></head><body>
+<div id="mask"></div>
+<div id="sel"></div>
+<script>
+const mask = document.getElementById('mask');
+const sel = document.getElementById('sel');
+let startX = null;
+let startY = null;
+let scaleFactor = 1;
+
+window.electronAPI.onScreenshotMode((data) => {
+    scaleFactor = data.scaleFactor || 1;
+});
+
+document.addEventListener('mousedown', (e) => {
+    startX = e.clientX;
+    startY = e.clientY;
+    sel.style.display = 'block';
+    sel.style.left = startX + 'px';
+    sel.style.top = startY + 'px';
+    sel.style.width = '0px';
+    sel.style.height = '0px';
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (startX === null) return;
+    const x = Math.min(startX, e.clientX);
+    const y = Math.min(startY, e.clientY);
+    const w = Math.abs(e.clientX - startX);
+    const h = Math.abs(e.clientY - startY);
+    sel.style.left = x + 'px';
+    sel.style.top = y + 'px';
+    sel.style.width = w + 'px';
+    sel.style.height = h + 'px';
+});
+
+document.addEventListener('mouseup', async (e) => {
+    const x = Math.min(startX, e.clientX);
+    const y = Math.min(startY, e.clientY);
+    const w = Math.abs(e.clientX - startX);
+    const h = Math.abs(e.clientY - startY);
+
+    if (w < 10 || h < 10) {
+        startX = null;
+        startY = null;
+        window.close();
+        return;
+    }
+
+    document.body.style.opacity = '0';
+    await new Promise(resolve => setTimeout(resolve, 80));
+
+    // 通过主进程获取屏幕截图，再在 Overlay 内裁剪选区
+    try {
+        const screenshot = await window.electronAPI.getScreenshot();
+        if (!screenshot || !screenshot.dataUrl) {
+            window.close();
+            return;
+        }
+
+        // 将截图裁剪到选区
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = w * scaleFactor;
+            canvas.height = h * scaleFactor;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img,
+                x * scaleFactor, y * scaleFactor, w * scaleFactor, h * scaleFactor,
+                0, 0, w * scaleFactor, h * scaleFactor
+            );
+            canvas.toBlob((blob) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    window.electronAPI.sendScreenshotCaptured(reader.result);
+                    window.close();
+                };
+                reader.readAsDataURL(blob);
+            }, 'image/png');
+        };
+        img.src = screenshot.dataUrl;
+    } catch(err) {
+        console.error('截图失败:', err);
+        window.close();
+    }
+});
+
+// ESC 取消
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { startX = null; startY = null; window.close(); }
+});
+</script>
+</body></html>
