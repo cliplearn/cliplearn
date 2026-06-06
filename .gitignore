@@ -13,6 +13,7 @@ node_modules/
 
 # ─── Electron ───
 out/
+dist-electron/
 
 # ─── 本地运行时数据（每个用户独立生成，不应入库） ───
 cliplearn.db

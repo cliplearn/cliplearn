@@ -15,7 +15,11 @@ from routes import register_routes, send_heartbeat
 
 def create_app():
     # 明确指定 templates 和 static 的路径，确保打包后 Electron 也能正确找到
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    if getattr(sys, 'frozen', False):
+        # PyInstaller 冻结模式：资源在 _MEIPASS/server/ 下
+        base_dir = os.path.join(sys._MEIPASS, 'server')
+    else:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
 
     app = Flask(
         __name__,

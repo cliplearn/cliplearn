@@ -1,1 +1,64 @@
-﻿{"name":"cliplearn-desktop","version":"1.0.1","main":"main.js","scripts":{"start":"electron ."},"devDependencies":{"electron":"^28.0.0"}}
+{
+  "name": "cliplearn-desktop",
+  "version": "1.0.1",
+  "description": "ClipLearn.ai — AI 驱动的桌面英语学习工具",
+  "author": "ClipLearn",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:python": "pyinstaller --clean --noconfirm ClipLearn-server.spec",
+    "build:installer": "set CSC_IDENTITY_AUTO_DISCOVERY=false && electron-builder build --win --publish=never",
+    "build": "npm run build:python && npm run build:installer",
+    "dist": "npm run build"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^26.8.1"
+  },
+  "build": {
+    "appId": "com.cliplearn.desktop",
+    "productName": "ClipLearn",
+    "copyright": "Copyright © 2024 ClipLearn",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist/ClipLearn-server.exe",
+        "to": "ClipLearn-server.exe"
+      }
+    ],
+    "win": {
+      "icon": "server/static/logo.ico",
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "server/static/logo.ico",
+      "uninstallerIcon": "server/static/logo.ico",
+      "installerHeaderIcon": "server/static/logo.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ClipLearn",
+      "installerLanguages": ["zh_CN", "en_US"],
+      "language": "2052",
+      "displayLanguageSelector": false,
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "menuCategory": "教育"
+    }
+  }
+}
