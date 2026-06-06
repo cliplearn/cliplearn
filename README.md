@@ -8,6 +8,16 @@ Built with **Electron** (frontend shell) + **Python Flask** (backend) + **Tesser
 
 ---
 
+<p align="center">
+  <a href="https://github.com/cliplearn/cliplearn/releases/latest">
+    <img src="https://img.shields.io/badge/⬇%20下载%20Windows-v1.0.3-4CAF50?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows">
+  </a>
+  <br>
+  <sub>无需管理员 · 开机自启 · 关闭驻留托盘 · 2键安装</sub>
+</p>
+
+---
+
 ## Features
 
 - 📸 **Screen Capture** — Press `Ctrl+Shift+C`, drag to select any screen area, and ClipLearn extracts the text
