@@ -47,9 +47,7 @@ a = Analysis(
         'deep_translator.google',
         # TTS
         'edge_tts',
-        'edge_tts.list_voices',
         'edge_tts.communicate',
-        'edge_tts.util',
         # 回收站
         'send2trash',
         'send2trash.win',
@@ -70,18 +68,11 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        # 排除不需要的大型库
-        'tkinter',
+        # 只排除确定不需要的大型第三方库
         'matplotlib',
         'numpy',
         'scipy',
         'pandas',
-        'test',
-        'unittest',
-        'email',
-        'html',
-        'xml',
-        'pydoc',
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -106,7 +97,7 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=True,   # 保留控制台窗口，方便调试
+    console=False,  # 由 Electron 通过 pipe 捕获输出，无需弹控制台
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
