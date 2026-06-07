@@ -51,6 +51,11 @@ def _find_tesseract():
     import subprocess
     import winreg
 
+    # 0) 项目自带 tesseract（优先级最高）
+    bundled = os.path.join(DATA_DIR, 'bin', 'tesseract', 'tesseract.exe')
+    if os.path.isfile(bundled):
+        return bundled
+
     # 1) Try where tesseract (respects PATH)
     try:
         result = subprocess.run(
@@ -335,7 +340,7 @@ def _speak_male_offline(text, output_path):
 # 统计服务器相关
 # ═══════════════════════════════════════════
 
-CLIPLEARN_VERSION = "1.0.1"
+CLIPLEARN_VERSION = "1.1.0"
 CLIPLEARN_SERVER = os.environ.get("CLIPLEARN_SERVER", "https://stats.cliplearn.ai")
 
 

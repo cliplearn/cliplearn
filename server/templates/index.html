@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN" data-version="v4-20260528">
 <head>
     <meta charset="UTF-8">
@@ -317,7 +317,6 @@
         }
         .cl-main-body.has-content {
             justify-content: flex-start;
-        }
             overflow-y: auto;
         }
 
@@ -737,8 +736,10 @@
                     <span class="cl-brand-c">C</span><span class="cl-brand-lip">lip</span><span class="cl-brand-l">L</span><span class="cl-brand-earn">earn.ai</span>
                 </span>
             </a>
-            <span class="cl-update-btn no-drag" id="btn-update" title="检查更新">↻</span>
-            <span class="cl-close-x no-drag" id="btn-close-x" title="关闭">✕</span>
+            <div class="no-drag" style="display:flex;align-items:center;gap:2px;">
+                <span class="cl-update-btn no-drag" id="btn-update" title="检查更新" style="margin-left:0;padding-right:4px;">↻</span>
+                <span class="cl-close-x no-drag" id="btn-close-x" title="关闭">✕</span>
+            </div>
         </div>
 
         <!-- ═══ 核心显示区 ═══ -->
@@ -1256,8 +1257,8 @@
                 const cur = getCurrentAudio();
                 if (!cur || cur.paused) { wordHighlightTimer = requestAnimationFrame(tick); return; }
                 const raw = cur.duration > 0 ? cur.currentTime / cur.duration : 0;
-                const progress = Math.min(raw + 0.06, 1.0);
-                const segIdx = Math.min(Math.floor(progress * segmentWordCount + 0.25), segmentWordCount - 1);
+                const progress = Math.min(raw + 0.02, 1.0);
+                const segIdx = Math.min(Math.floor(progress * segmentWordCount), segmentWordCount - 1);
                 const idx = Math.min(wordOffset + segIdx, wordSpans.length - 1);
                 highlightWord(idx);
                 wordHighlightTimer = requestAnimationFrame(tick);
@@ -1541,7 +1542,7 @@
         // ═══════════════════════════════════════════
         // 更新检查
         // ═══════════════════════════════════════════
-        const CURRENT_VERSION = '1.0.0';
+        const CURRENT_VERSION = '1.1.0';
         let isCheckingUpdate = false;
 
         function showUpdateDialog(title, badge, notes, actionText, actionUrl) {

@@ -382,7 +382,7 @@ function setupIPC() {
         if (mainWindow && !mainWindow.isDestroyed()) {
             restoreAfterOverlay = false;
             restoreMainWindow();
-            mainWindow.webContents.send('process-screenshot', dataUrl);
+            mainWindow.webContents.send('screenshot-captured', dataUrl);
         }
     });
 
