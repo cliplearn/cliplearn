@@ -22,9 +22,13 @@ const sel = document.getElementById('sel');
 let startX = null;
 let startY = null;
 let scaleFactor = 1;
+let screenW = 1920;
+let screenH = 1080;
 
 window.electronAPI.onScreenshotMode((data) => {
     scaleFactor = data.scaleFactor || 1;
+    screenW = data.screenW || screenW;
+    screenH = data.screenH || screenH;
 });
 
 document.addEventListener('mousedown', (e) => {
@@ -55,7 +59,9 @@ document.addEventListener('mouseup', async (e) => {
     const w = Math.abs(e.clientX - startX);
     const h = Math.abs(e.clientY - startY);
 
-    if (w < 10 || h < 10) {
+    const screenArea = screenW * screenH;
+    const selArea = w * h;
+    if (w < 10 || h < 10 || selArea > screenArea / 4) {
         startX = null;
         startY = null;
         window.close();

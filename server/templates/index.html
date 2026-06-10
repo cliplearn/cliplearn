@@ -1125,13 +1125,32 @@
             audioMale.load();
         }
 
+        function truncateEngAtBreak(eng, maxWords) {
+            const words = eng.trim().split(/\s+/);
+            if (words.length <= maxWords) return eng;
+            // 在前 maxWords 词内从后往前找最近的断句点
+            const window = words.slice(0, maxWords).join(' ');
+            for (let i = window.length - 1; i >= 0; i--) {
+                const ch = window[i];
+                if (ch === '.' || ch === '?' || ch === '!' || ch === ',') {
+                    return window.substring(0, i + 1);
+                }
+            }
+            // 无标点则取最后完整词
+            return window.substring(0, window.lastIndexOf(' '));
+        }
+
         function appendTextToCard(eng, chn, rid) {
-            const card = currentCard();
+            // 一次截图的英文必须在同一张卡：超过 80 词则句尾/逗点截断
+            eng = truncateEngAtBreak(eng, CARD_MAX_WORDS);
             const newWords = eng.trim().split(/\s+/).length;
+
+            // 英文进入卡片（完整放、不拆），中文译文可跨卡、保持完整
+            const card = currentCard();
             const currentWords = cardWordCount(card);
 
             if (currentWords > 0 && currentWords + newWords > CARD_MAX_WORDS) {
-                // 溢出：文本完整进入下一张卡片
+                // 当前卡没空间 → 英文+中文完整进新卡
                 cards.push({
                     num: cards.length + 1,
                     texts: [eng],

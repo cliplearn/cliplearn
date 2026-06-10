@@ -512,7 +512,7 @@ def register_routes(app):
                 return jsonify({"error": "未能识别出文字"}), 400
 
             # 截断过长的文本
-            extracted_text = _truncate_text(extracted_text, max_words=80)
+            extracted_text = _truncate_text(extracted_text, max_words=200)
 
             # ---- 翻译分流 ----
             if aws_available:
