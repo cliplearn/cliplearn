@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, globalShortcut, nativeImage, screen, ipcMain } = require('electron');
+const { app, BrowserWindow, Tray, Menu, globalShortcut, nativeImage, nativeTheme, screen, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const http = require('http');
@@ -7,9 +7,6 @@ const http = require('http');
 const FLASK_PORT = 5000;
 const FLASK_HOST = '127.0.0.1';
 const FLASK_URL = `http://${FLASK_HOST}:${FLASK_PORT}`;
-const CARD_WIDTH = 375;
-const CARD_HEIGHT = 900;
-
 let mainWindow = null;    // 卡片主窗口
 let miniWindow = null;    // 浮动 CL 徽标（关闭后显示）
 let tray = null;          // 系统托盘
@@ -134,34 +131,34 @@ function createMiniWindow() {
 }
 
 // ─── 4. 创建卡片主窗口 ───
-function createMainWindow() {
+function getWindowSize() {
     const { width: screenW, height: screenH } = screen.getPrimaryDisplay().workAreaSize;
-    const windowWidth = Math.min(CARD_WIDTH, screenW - 40);
-    const windowHeight = Math.min(CARD_HEIGHT, screenH - 40);
+    const windowWidth = Math.floor(screenW * 0.35);
+    const windowHeight = screenH;
+    return { windowWidth, windowHeight, screenW, screenH };
+}
+
+function createMainWindow() {
+    const { windowWidth, windowHeight, screenW, screenH } = getWindowSize();
 
     mainWindow = new BrowserWindow({
         width: windowWidth,
         height: windowHeight,
-        minWidth: 340,
-        minHeight: 640,
-        x: screenW - windowWidth - 8,
-        y: Math.round(screenH / 2 - windowHeight / 2),
-        frame: false,
-        transparent: true,
+        x: screenW - windowWidth,
+        y: 0,
+        frame: true,
+        transparent: false,
         resizable: true,
-        alwaysOnTop: true,
         skipTaskbar: false,
         show: false,
-        backgroundColor: '#00000000',
-        title: 'ClipLearn.ai',
+        backgroundColor: '#1F1F1F',
+        title: 'ClipLearn',
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
             preload: path.join(__dirname, 'preload.js')
         }
     });
-
-    mainWindow.setAlwaysOnTop(true, 'floating');
 
     // 页面加载完成后才显示窗口，避免白屏闪烁
     mainWindow.webContents.on('did-finish-load', () => {
@@ -182,6 +179,22 @@ function createMainWindow() {
             }
         }, 2000);
     });
+
+    // 屏幕分辨率变化时自动调整窗口位置与大小 (右侧 1/3 屏)
+    const repositionWindow = () => {
+        if (!mainWindow || mainWindow.isDestroyed()) return;
+        const sz = getWindowSize();
+        const bounds = mainWindow.getBounds();
+        const newW = sz.windowWidth;
+        const newH = sz.windowHeight;
+        const newX = sz.screenW - newW;
+        const newY = 0;
+        if (bounds.x !== newX || bounds.y !== newY || bounds.width !== newW || bounds.height !== newH) {
+            mainWindow.setBounds({ x: newX, y: newY, width: newW, height: newH });
+        }
+    };
+    screen.on('display-metrics-changed', repositionWindow);
+    mainWindow.on('resize', repositionWindow);
 
     mainWindow.loadURL(FLASK_URL);
 
@@ -220,15 +233,13 @@ function restoreMainWindow() {
         mainWindow.restore();
     }
 
-    // 面板定位到屏幕右侧（不挡住 mini-badge 的原始位置）
-    const { width: screenW, height: screenH } = screen.getPrimaryDisplay().workAreaSize;
-    const winBounds = mainWindow.getBounds();
-    const x = screenW - winBounds.width - 8;
-    const y = Math.round(screenH / 2 - winBounds.height / 2);
-    mainWindow.setPosition(x, y);
+    // 面板定位到屏幕右侧（右侧 1/3 屏）
+    const { windowWidth, windowHeight, screenW } = getWindowSize();
+    const x = screenW - windowWidth;
+    const y = 0;
+    mainWindow.setBounds({ x, y, width: windowWidth, height: windowHeight });
 
     mainWindow.show();
-    mainWindow.setAlwaysOnTop(true, 'floating');
     mainWindow.focus();
 }
 
@@ -403,6 +414,9 @@ if (process.platform === 'win32') {
 const isAutoStart = process.argv.includes('--autostart');
 
 app.whenReady().then(async () => {
+    // 强制深色 Windows 原生标题栏
+    nativeTheme.themeSource = 'dark';
+
     // 打印路径信息（便于排查安装后路径问题）
     console.log('[Main] exe路径:', process.execPath);
     console.log('[Main] resourcesPath:', process.resourcesPath);

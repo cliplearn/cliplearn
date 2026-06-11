@@ -25,6 +25,7 @@ from database import (
     move_oldest_active_to_archive,
     delete_from_active_or_archive,
     periodic_cleanup,
+    cleanup_invalid_cards,
     APP_ROOT, DATA_DIR, AUDIO_DIR,
     MAX_ACTIVE_FREE, MAX_ACTIVE,
 )
@@ -340,7 +341,7 @@ def _speak_male_offline(text, output_path):
 # 统计服务器相关
 # ═══════════════════════════════════════════
 
-CLIPLEARN_VERSION = "1.1.0"
+CLIPLEARN_VERSION = "2.0.0"
 CLIPLEARN_SERVER = os.environ.get("CLIPLEARN_SERVER", "https://stats.cliplearn.ai")
 
 
@@ -748,6 +749,29 @@ def register_routes(app):
     @app.route("/api/status_full", methods=['GET'])
     def api_status_full():
         return jsonify(get_user_status())
+
+    # ── 6.5 清理 & 计数 ──
+    @app.route("/api/cleanup", methods=['POST'])
+    def api_cleanup():
+        """一键清理本地缓存与失效卡片"""
+        try:
+            removed_active, removed_trash = cleanup_invalid_cards()
+            return jsonify({
+                "status": "ok",
+                "removed_active": removed_active,
+                "removed_trash": removed_trash
+            })
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+
+    @app.route("/api/count", methods=['GET'])
+    def api_count():
+        """返回 SQLite 活跃记录总数"""
+        try:
+            n = count_active()
+            return jsonify({"count": n})
+        except Exception as e:
+            return jsonify({"count": 0, "error": str(e)})
 
     # ── 7. 检查更新 ──
     @app.route("/api/check-update", methods=['GET'])
