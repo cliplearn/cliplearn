@@ -21,8 +21,6 @@ AUDIO_DIR = os.path.join(APP_ROOT, "clip_audios")
 MAX_ACTIVE_FREE = 100   # free tier: prompt to upgrade to web version
 MAX_ACTIVE = 200        # hard limit: prompt to upgrade to paid version
 MAX_ARCHIVE = 1000
-MAX_TRASH_AGE_DAYS = 30
-AUDIO_CLEANUP_AGE_DAYS = 30
 CLEANUP_INTERVAL = 3600
 
 
@@ -182,77 +180,15 @@ def periodic_cleanup():
         conn = get_db_connection()
         conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
         conn.close()
-
-        # 清理过期音频文件
-        if os.path.exists(AUDIO_DIR):
-            cutoff = now - AUDIO_CLEANUP_AGE_DAYS * 86400
-            for fname in os.listdir(AUDIO_DIR):
-                if not fname.endswith('.mp3'):
-                    continue
-                fp = os.path.join(AUDIO_DIR, fname)
-                try:
-                    if os.path.getmtime(fp) < cutoff:
-                        os.remove(fp)
-                except OSError:
-                    pass
-
-        # 清理过期回收站记录
-        conn = get_db_connection()
-        cutoff = now - MAX_TRASH_AGE_DAYS * 86400
-        conn.execute("DELETE FROM trash_records WHERE trashed_at < ?", (cutoff,))
-        conn.commit()
-        conn.close()
     finally:
         _cleanup_lock.release()
 
 
 def cleanup_invalid_cards():
-    """清理失效卡片：移除音频文件已丢失的记录，清理过期回收站。
+    """清理失效卡片（音频文件在删除卡片时已送 Windows 回收站，此处为预留接口）。
     返回 (removed_active, removed_trash) 计数。
     """
-    conn = get_db_connection()
-    removed_active = 0
-    removed_trash = 0
-
-    # 1. 移除 active_records 中音频文件已丢失的记录
-    active = conn.execute("SELECT id, audio_path FROM active_records").fetchall()
-    for row in active:
-        rid = row['id']
-        # 检查至少一个音频文件存在（female 或 male）
-        base = os.path.join(AUDIO_DIR, rid)
-        has_female = os.path.exists(base + '.mp3')
-        has_male = os.path.exists(base + '_male.mp3')
-        if not has_female and not has_male:
-            # 移入回收站
-            conn.execute(
-                "INSERT INTO trash_records (id, english, chinese, audio_path, created_at, trashed_at) "
-                "SELECT id, english, chinese, audio_path, created_at, ? FROM active_records WHERE id = ?",
-                (time.time(), rid)
-            )
-            conn.execute("DELETE FROM active_records WHERE id = ?", (rid,))
-            removed_active += 1
-
-    # 2. 清理过期回收站
-    cutoff = time.time() - MAX_TRASH_AGE_DAYS * 86400
-    cursor = conn.execute("DELETE FROM trash_records WHERE trashed_at < ?", (cutoff,))
-    removed_trash = cursor.rowcount
-
-    # 3. 清理过期音频文件
-    if os.path.exists(AUDIO_DIR):
-        audio_cutoff = time.time() - AUDIO_CLEANUP_AGE_DAYS * 86400
-        for fname in os.listdir(AUDIO_DIR):
-            if not fname.endswith('.mp3'):
-                continue
-            fp = os.path.join(AUDIO_DIR, fname)
-            try:
-                if os.path.getmtime(fp) < audio_cutoff:
-                    os.remove(fp)
-            except OSError:
-                pass
-
-    conn.commit()
-    conn.close()
-    return removed_active, removed_trash
+    return 0, 0
 
 
 if __name__ == '__main__':
