@@ -1,1811 +1,1001 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-version="v2.0.0">
+<html class="dark" lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>ClipLearn | The Learning Revolution</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@400;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>ClipLearn</title>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed-dim": "#00daf3",
+                        "surface-variant": "#353534",
+                        "primary-fixed-dim": "#9fcaff",
+                        "on-surface-variant": "#bfc7d5",
+                        "on-surface": "#e5e2e1",
+                        "surface-container-low": "#1c1b1b",
+                        "surface": "#131313",
+                        "error": "#ffb4ab",
+                        "inverse-primary": "#0061a5",
+                        "outline-variant": "#3f4753",
+                        "background": "#131313",
+                        "surface-container-high": "#2a2a2a",
+                        "primary": "#9fcaff",
+                        "surface-container-highest": "#353534"
+                    },
+                    "borderRadius": { "DEFAULT": "0px" },
+                    "fontFamily": {
+                        "body-sm": ["Inter", "sans-serif"],
+                        "label-md": ["JetBrains Mono", "monospace"],
+                        "body-md": ["Inter", "sans-serif"],
+                        "headline-lg": ["Inter", "sans-serif"],
+                        "headline-xl": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        /* ─── 全局暗色背景 ─── */
-        html,
+        :root { --titlebar-h: 32px; }
         body {
-            width: 100%;
-            height: 100%;
+            background-color: #131313;
+            color: #e5e2e1;
+            -webkit-font-smoothing: antialiased;
             overflow: hidden;
-            background: #1F1F1F;
-        }
-
-        body {
-            background: #1F1F1F;
-            color: #E0E0E0;
-            font-family: "Segoe UI", Arial, sans-serif;
+            height: 100vh;
             margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            box-sizing: border-box;
-            height: 100vh;
         }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+            font-size: 20px;
+        }
+        .glow-cyan { text-shadow: 0 0 10px rgba(0, 218, 243, 0.4); }
+        .glow-green { text-shadow: 0 0 10px rgba(74, 222, 128, 0.4); }
+        .kbd-style { background-color: #2A2A2A; border: 1px solid #3F4753; padding: 2px 6px; }
+        .hub-transition { transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
 
-        h2 {
-            color: #0B78F0;
-            font-size: 26px;
-            line-height: 1.15;
-            font-weight: 400;
-            letter-spacing: 0;
-            margin: 0 0 7px;
+        /* Card Stack */
+        .card-container { position: relative; width: 100%; height: 100%; perspective: 1000px; }
+        .learning-card {
+            position: absolute; inset: 0; display: none; flex-direction: column;
+            align-items: center; justify-content: center; padding: 24px; text-align: center;
+            background: #131313; z-index: 10; overflow: hidden;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease;
         }
+        .learning-card.active { display: flex; z-index: 20; }
+        .slide-out-right { animation: slideOutRight 0.5s forwards; }
+        .slide-in-left { animation: slideInLeft 0.5s forwards; }
+        .slide-out-left { animation: slideOutLeft 0.5s forwards; }
+        .slide-in-right { animation: slideInRight 0.5s forwards; }
+        .delete-down { animation: deleteDown 0.6s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards; }
+        @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+        @keyframes slideInLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOutLeft { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-100%); opacity: 0; } }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes deleteDown { from { transform: translateY(0) scale(1); opacity: 1; } to { transform: translateY(1000px) scale(0.5); opacity: 0; } }
 
-        .notice {
-            font-size: 14px;
-            color: #6C737A;
-            line-height: 1.3;
-            margin-bottom: 22px;
+        /* Dropdown */
+        .dropdown-item {
+            padding: 8px 16px; font-size: 12px; color: #bfc7d5; cursor: pointer;
+            white-space: nowrap; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.04em;
+            transition: background-color 0.12s;
         }
+        .dropdown-item:hover { background-color: #201f1f; color: #00daf3; }
+        .dropdown-item.current { color: #00daf3; font-weight: 700; }
 
-        /* ─── 核心窗口 ─── */
-        #cl-card {
-            width: 100%;
-            height: 100vh;
-            background: none;
-            display: flex;
-            flex-direction: column;
-            user-select: none;
-            overflow: hidden;
-        }
+        /* Audio word highlight */
+        .entry-line { transition: background-color 0.15s; border: 1px solid transparent; padding: 6px 8px; border-radius: 0; }
+        .entry-line.playing-entry { background-color: rgba(0,218,243,0.12); }
+        .entry-en { font-size: 14px; color: #9fcaff; font-weight: 600; line-height: 1.4; }
+        .entry-zh { font-size: 12px; color: #89919e; margin-top: 4px; line-height: 1.35; }
 
-        #segments-area.slide-left-out {
-            animation: slideLeftOut 0.35s cubic-bezier(0.4, 0, 1, 1) forwards;
-        }
-        #segments-area.slide-left-in {
-            animation: slideLeftIn 0.35s cubic-bezier(0, 0, 0.2, 1) forwards;
-        }
-        #segments-area.slide-right-out {
-            animation: slideRightOut 0.35s cubic-bezier(0.4, 0, 1, 1) forwards;
-        }
-        #segments-area.slide-right-in {
-            animation: slideRightIn 0.35s cubic-bezier(0, 0, 0.2, 1) forwards;
-        }
-        #segments-area.slide-down-out {
-            animation: slideDownOut 0.4s cubic-bezier(0.4, 0, 1, 1) forwards;
-        }
+        /* Search */
+        .search-result-item { padding: 10px 16px; border-bottom: 1px solid #2a2a2a; cursor: pointer; transition: background-color 0.15s; }
+        .search-result-item:hover { background-color: #201f1f; }
+        .search-result-highlight { background-color: rgba(0, 218, 243, 0.2); color: #00daf3; }
 
-        @keyframes slideLeftOut {
-            0%   { transform: translateX(0); opacity: 1; }
-            100% { transform: translateX(-140%); opacity: 0; }
-        }
-        @keyframes slideLeftIn {
-            0%   { transform: translateX(80%); opacity: 0; }
-            100% { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes slideRightOut {
-            0%   { transform: translateX(0); opacity: 1; }
-            100% { transform: translateX(140%); opacity: 0; }
-        }
-        @keyframes slideRightIn {
-            0%   { transform: translateX(-80%); opacity: 0; }
-            100% { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes slideDownOut {
-            0%   { transform: translateY(0); opacity: 1; }
-            100% { transform: translateY(120%); opacity: 0; }
-        }
+        /* Selection */
+        .selection-active .record-actions { display: flex; }
+        .record-actions { display: none; }
+        .selection-active .entry-line { border-color: #2a2a2a; }
+        .selection-active .entry-line:hover { background-color: #201f1f; border-color: #353534; }
 
-        /* ─── 核心显示区 ─── */
-        .cl-main-body {
-            flex: 1;
-            min-height: 0;
-            padding: 0 28px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            position: relative;
+        #toast {
+            position: fixed; bottom: 64px; left: 50%; transform: translateX(-50%) translateY(100px);
+            background: #201f1f; border: 1px solid #353534; padding: 8px 16px; color: #e5e2e1;
+            font-size: 13px; z-index: 100; pointer-events: none;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        .cl-main-body.has-content {
-            justify-content: flex-start;
-            overflow-y: auto;
-        }
+        #toast.show { transform: translateX(-50%) translateY(0); }
 
-        .cl-text-display-zone {
-            cursor: pointer;
-            text-align: left;
-            padding: 0;
-            overflow: hidden;
+        /* Settings Panel */
+        .settings-panel {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #1c1b1b;
+            z-index: 60; display: flex; flex-direction: column; box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+            transform: translateX(-105%);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
-        /* ─── 段 pair：英文 + 中文组合 ─── */
-        .cl-seg {
-            cursor: pointer;
-            padding: 8px 0;
-            border-radius: 6px;
-            transition: background-color 0.15s;
-            margin-bottom: 18px;
+        .settings-panel.open { transform: translateX(0); }
+        .settings-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: #131313; }
+        .settings-panel-body { flex: 1; overflow-y: auto; padding: 16px; }
+        .settings-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .settings-label { font-size: 12px; color: #89919e; }
+        .settings-select {
+            background: #2a2a2a; color: #9fcaff; border: 1px solid #3F4753; padding: 3px 6px;
+            font-size: 11px; font-weight: 600; cursor: pointer; outline: none; font-family: inherit;
         }
-        .cl-seg:hover {
-            background-color: rgba(11, 120, 240, 0.08);
+        .settings-select option { background: #1c1b1b; color: #9fcaff; }
+        .settings-divider { border: none; border-top: 1px solid #2a2a2a; margin: 10px 0; }
+        .settings-action-btn {
+            background: none; border: 1px solid #3F4753; color: #89919e; cursor: pointer;
+            padding: 6px 14px; font-size: 12px; transition: color 0.2s, border-color 0.2s, background-color 0.2s;
         }
-        .cl-seg.playing-seg {
-            background-color: rgba(11, 120, 240, 0.12);
-        }
-        .cl-seg-eng {
-            font-size: 18px;
-            color: #FFFFFF;
-            line-height: 1.5;
-            font-style: italic;
-            font-weight: 700;
-        }
-        .cl-seg-chn {
-            font-size: 15px;
-            color: #9A9A9A;
-            line-height: 1.45;
-            margin-top: 6px;
-            white-space: pre-line;
-        }
-
-        /* ─── 封面首页 tagline ─── */
-        .cl-cover-tagline {
-            text-align: center;
-            padding: 0 20px;
-            margin-bottom: 24px;
-        }
-        .cl-cover-en {
-            font-size: 19px;
-            color: #0B78F0;
-            font-weight: 700;
-            font-style: italic;
-            letter-spacing: 0.3px;
-            line-height: 1.5;
-        }
-        .cl-cover-zh {
-            font-size: 16px;
-            color: #B8956A;
-            font-weight: 400;
-            margin-top: 4px;
-            line-height: 1.5;
-            letter-spacing: 0.5px;
-        }
-        .cl-cover-vision {
-            text-align: center;
-            padding: 0 12px;
-            margin-bottom: 32px;
-        }
-        .cl-cover-sub {
-            font-size: 11px;
-            color: #757575;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-        }
-        .cl-cover-tips {
-            text-align: center;
-            padding: 0 20px;
-            margin-top: 28px;
-        }
-        .cl-cover-tips-en {
-            font-size: 13px;
-            color: #81c784;
-            line-height: 1.6;
-        }
-        .cl-cover-tips-zh {
-            font-size: 14px;
-            color: #a5d6a7;
-            margin-top: 2px;
-            line-height: 1.6;
-        }
-        .cl-cover-footer {
-            margin-top: 20px;
-            text-align: center;
-            padding: 0 16px;
-        }
-        .cl-cover-footer-en {
-            font-size: 12px;
-            color: #888;
-            line-height: 1.5;
-        }
-        .cl-cover-footer-zh {
-            font-size: 13px;
-            color: #666;
-            margin-top: 4px;
-            line-height: 1.5;
-        }
-        kbd {
-            background-color: #333;
-            padding: 1px 6px;
-            border-radius: 4px;
-            color: #ffb74d;
-            font-family: Consolas, Monaco, monospace;
-            font-size: 11px;
-            border: 1px solid #444;
-        }
-        .cl-word {
-            display: inline;
-            border-radius: 3px;
-            padding: 1px 2px;
-            margin: 0 1px;
-            transition: background-color 0.15s, color 0.15s;
-        }
-        .cl-word.active {
-            background-color: #0B78F0;
-            color: #FFFFFF;
-        }
-
-        .cl-audio-status-light {
-            font-size: 13px;
-            color: #0B78F0;
-            font-weight: bold;
-            margin-top: 10px;
-            display: inline-block;
-            letter-spacing: 1.5px;
-        }
-
-        /* 卡片编号 & 时间戳 */
-        .cl-card-overlay {
-            position: absolute;
-            pointer-events: none;
-            font-size: 12px;
-            font-weight: 700;
-            color: #888;
-            letter-spacing: 0.5px;
-        }
-        .cl-card-num {
-            top: 8px;
-            right: 14px;
-        }
-        .cl-card-time {
-            bottom: 8px;
-            right: 14px;
-        }
-
-        /* ─── 底部工具栏：⚙ ⚙️ 🗑 ◀ N/M ▶ ─── */
-        .cl-footer {
-            flex-shrink: 0;
-            min-height: 52px;
-            background-color: #1A1A1A;
-            border-top: 1px solid #2A2A2A;
-            display: flex;
-            align-items: stretch;
-            padding: 0;
-        }
-        .cl-footer-section {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            padding: 12px 10px 10px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            position: relative;
-        }
-        .cl-footer-section:hover {
-            background-color: #252525;
-        }
-        .cl-footer-section.settings-section {
-            flex: 0 0 80px;
-            border-right: 1px solid #2A2A2A;
-        }
-        .cl-footer-section.trash-section {
-            flex: 0 0 80px;
-            border-right: 1px solid #2A2A2A;
-        }
-        .cl-footer-section.nav-section {
-            flex: 1;
-            min-width: 0;
-        }
-        .cl-footer-icon {
-            font-size: 18px;
-            line-height: 1;
-            color: #999;
-            transition: color 0.2s;
-        }
-        .cl-footer-section:hover .cl-footer-icon {
-            color: #0B78F0;
-        }
-        .cl-footer-section.trash-section:hover .cl-footer-icon {
-            color: #CF6679;
-        }
-        .cl-footer-label {
-            font-size: 10px;
-            color: #666;
-            white-space: nowrap;
-            transition: color 0.2s;
-        }
-        .cl-footer-section:hover .cl-footer-label {
-            color: #999;
-        }
-
-        /* 导航区横向排列 */
-        .nav-controls {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            width: 100%;
-            justify-content: center;
-        }
-        .nav-arrow {
-            background: none;
-            border: none;
-            color: #999;
-            cursor: pointer;
-            font-size: 18px;
-            font-weight: bold;
-            padding: 4px 8px;
-            border-radius: 6px;
-            transition: color 0.2s, background-color 0.2s;
-            line-height: 1;
-            user-select: none;
-        }
-        .nav-arrow:hover {
-            color: #0B78F0;
-            background-color: #252525;
-        }
-        .nav-arrow:active {
-            background-color: #333;
-        }
-        .nav-arrow.disabled {
-            color: #444;
-            pointer-events: none;
-            cursor: default;
-        }
-        .nav-arrow.long-pressing {
-            color: #0B78F0;
-            background-color: #333;
-        }
-
-        /* 卡片计数器 — 点击可跳转 */
-        .nav-counter {
-            font-size: 13px;
-            font-weight: 700;
-            color: #888;
-            cursor: pointer;
-            padding: 2px 8px;
-            border-radius: 4px;
-            transition: color 0.2s, background-color 0.2s;
-            white-space: nowrap;
-            user-select: none;
-            min-width: 56px;
-            text-align: center;
-        }
-        .nav-counter:hover {
-            color: #FFF;
-            background-color: #333;
-        }
-
-        /* 跳转输入框 */
-        .nav-jump-input {
-            width: 50px;
-            background: #252525;
-            border: 1px solid #0B78F0;
-            border-radius: 4px;
-            color: #FFF;
-            font-size: 13px;
-            font-weight: 700;
-            text-align: center;
-            padding: 2px 4px;
-            outline: none;
-            font-family: inherit;
-            box-sizing: border-box;
-        }
-        .nav-jump-input:focus {
-            border-color: #2090FF;
-        }
-        #cl-settings-panel {
-            background-color: #161616;
-            border-top: 1px solid #2A2A2A;
-            padding: 15px 20px;
-            display: none;
-            font-size: 12px;
-            color: #888;
-        }
-        .setting-row {
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .setting-divider {
-            border: none;
-            border-top: 1px solid #2A2A2A;
-            margin: 10px 0;
-        }
-
-        /* 卡片定位下拉 */
-        .position-selects {
-            display: flex;
-            gap: 6px;
-        }
-        .pos-select {
-            background: #252525;
-            color: #116cc7;
-            border: 1px solid #333;
-            border-radius: 4px;
-            padding: 3px 4px;
-            font-size: 10px;
-            font-weight: bold;
-            cursor: pointer;
-            outline: none;
-            font-family: inherit;
-        }
-        .pos-select option { background: #161616; color: #116cc7; }
-
-        /* 版权 */
-        .setting-copyright {
-            text-align: center;
-            font-size: 11px;
-            font-weight: 700;
-            color: #0B78F0;
-            padding-top: 6px;
-            letter-spacing: 0.5px;
-        }
-
-        .setting-action-btn {
-            background: none;
-            border: 1px solid #333;
-            color: #888;
-            cursor: pointer;
-            padding: 6px 14px;
-            border-radius: 6px;
-            font-size: 12px;
-            transition: color 0.2s, border-color 0.2s, background-color 0.2s;
-        }
-        .setting-action-btn:hover { color: #CF6679; border-color: #CF6679; background-color: #2A1A1A; }
-        .setting-action-btn.login-btn:hover { color: #4CAF50; border-color: #4CAF50; background-color: #1A2A1A; }
-        /* 主题 */
-        .theme-options {
-            display: flex;
-            gap: 10px;
-        }
-        .theme-radio {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            cursor: pointer;
-            font-size: 11px;
-            color: #AAA;
-        }
+        .settings-action-btn:hover { color: #ffb4ab; border-color: #ffb4ab; background-color: #2a1f1f; }
+        .settings-action-btn.login-btn:hover { color: #4ade80; border-color: #4ade80; background-color: #1a2a1a; }
+        .theme-options { display: flex; gap: 10px; }
+        .theme-radio { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11px; color: #89919e; }
         .theme-radio input { display: none; }
-        .theme-circle {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            border: 1.5px solid #555;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: border-color 0.2s;
+        .theme-swatch { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #555; flex-shrink: 0; transition: border-color 0.2s; }
+        .theme-radio input:checked + .theme-swatch { border-color: #00daf3; }
+        .theme-swatch.dark { background: #1E1E1E; }
+        .theme-swatch.light { background: #F5F5F5; }
+        .rename-text-input {
+            width: 130px; background: #2a2a2a; color: #9fcaff; border: 1px solid #3F4753;
+            padding: 3px 8px; font-size: 11px; font-weight: 600; outline: none; font-family: inherit;
         }
-        .theme-radio input:checked + .theme-circle { border-color: #116cc7; }
-        .theme-radio input:checked + .theme-circle::after {
-            content: '✓';
-            font-size: 9px;
-            color: #116cc7;
-            font-weight: bold;
-            line-height: 1;
-        }
-        .theme-circle.dark { background: #1E1E1E; }
-        .theme-circle.light { background: #F5F5F5; }
-        .theme-circle.cool { background: linear-gradient(135deg, #FF2D78, #8B5CF6); }
+        .rename-text-input::placeholder { color: #555; font-size: 10px; }
+        .rename-text-input:focus { border-color: #00daf3; }
+        .settings-copyright { text-align: center; font-size: 11px; font-weight: 700; color: #9fcaff; padding-top: 12px; letter-spacing: 0.5px; }
+        .btn-dimmed { opacity: 0.25 !important; pointer-events: none !important; }
 
-        @keyframes pulse {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(17, 108, 199, 0.4); }
-            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(17, 108, 199, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(17, 108, 199, 0); }
-        }
-
-        /* ─── 关闭后浮动 CL 徽标（屏幕右侧） ─── */
-        #cl-mini-badge {
-            display: none;
-            position: fixed;
-            top: 35%;
-            right: 4px;
-            width: 28px;
-            height: 28px;
-            cursor: pointer;
-            z-index: 9999;
-            border-radius: 6px;
-            overflow: hidden;
-            transition: transform 0.2s;
-        }
-        #cl-mini-badge:hover { transform: scale(1.1); }
-
-        /* 炫酷主题 — mini-badge 阴影 */
-        body.theme-cool #cl-mini-badge {
-            box-shadow: 0 4px 20px rgba(255,45,120,0.25);
-        }
-
-        /* ─── 充值界面 ─── */
-        .recharge-title { color: #FFF; }
-        body.theme-light .recharge-title { color: #222; }
-        body.theme-cool .recharge-title { color: #FFE0F0; }
-
-        /* ============ 浅色主题 ============ */
-        body.theme-light {
-            background: #FFFFFF;
-            color: #222;
-        }
-        body.theme-light h2 { color: #116cc7; }
-        body.theme-light .notice { color: #999; }
-        body.theme-light .cl-footer {
-            background-color: #F8F8F9;
-            border-color: #E8E8E8;
-        }
-        body.theme-light .cl-footer-section { border-color: #E8E8E8; }
-        body.theme-light .cl-footer-section:hover { background-color: #EBEBEB; }
-        body.theme-light .cl-footer-icon { color: #999; }
-        body.theme-light .cl-footer-label { color: #888; }
-        body.theme-light .nav-arrow { color: #999; }
-        body.theme-light .nav-arrow:hover { color: #116cc7; background-color: #EBEBEB; }
-        body.theme-light .nav-arrow.disabled { color: #DDD; }
-        body.theme-light .nav-arrow.long-pressing { color: #116cc7; background-color: #E0E0E0; }
-        body.theme-light .nav-counter { color: #999; }
-        body.theme-light .nav-counter:hover { color: #222; background-color: #EBEBEB; }
-        body.theme-light .nav-jump-input { background: #F0F0F0; border-color: #116cc7; color: #222; }
-        body.theme-light .cl-seg-eng { color: #222; }
-        body.theme-light .cl-word.active { background-color: #116cc7; color: #FFF; }
-        body.theme-light .cl-card-overlay { color: #999; }
-        body.theme-light .cl-seg-chn { color: #666; }
-        body.theme-light .cl-cover-en { color: #0D47A1; }
-        body.theme-light .cl-cover-zh { color: #8B6914; }
-        body.theme-light .cl-cover-sub { color: #999; }
-        body.theme-light .cl-cover-tips-en { color: #388E3C; }
-        body.theme-light .cl-cover-tips-zh { color: #43A047; }
-        body.theme-light .cl-cover-footer-en { color: #999; }
-        body.theme-light .cl-cover-footer-zh { color: #888; }
-        body.theme-light kbd { background-color: #E8E8E8; color: #E65100; border-color: #CCC; }
-        body.theme-light .cl-audio-status-light { color: #116cc7; }
-        body.theme-light .cl-seg:hover { background-color: rgba(17, 108, 199, 0.06); }
-        body.theme-light .cl-seg.playing-seg { background-color: rgba(17, 108, 199, 0.10); }
-        body.theme-light #cl-settings-panel {
-            background-color: #F2F2F4;
-            border-top-color: #E8E8E8;
-            color: #666;
-        }
-        body.theme-light .setting-divider { border-top-color: #E0E0E0; }
-        body.theme-light .setting-action-btn { border-color: #CCC; color: #999; }
-        body.theme-light .setting-action-btn:hover { background-color: #FDE8E8; }
-        body.theme-light .pos-select { background: #F0F0F0; color: #116cc7; border-color: #CCC; }
-        body.theme-light .pos-select option { background: #FFF; color: #116cc7; }
-        body.theme-light .setting-row select {
-            background: #F0F0F0 !important;
-            color: #116cc7 !important;
-            border-color: #CCC !important;
-        }
-        body.theme-light .setting-row select option { background: #FFF; color: #116cc7; }
-        body.theme-light .theme-radio { color: #888; }
-        body.theme-light .theme-circle { border-color: #CCC; }
-        body.theme-light .setting-copyright { color: #116cc7; }
-
-        /* ============ 炫酷主题 ============ */
-        body.theme-cool {
-            background: #12122A;
-            color: #D0D0FF;
-        }
-        body.theme-cool h2 { color: #FF2D78; }
-        body.theme-cool .notice { color: #665588; }
-        body.theme-cool .cl-footer {
-            background-color: #0E0E22;
-            border-color: #252550;
-        }
-        body.theme-cool .cl-footer-section { border-color: #252550; }
-        body.theme-cool .cl-footer-section:hover { background-color: #1A1A3A; }
-        body.theme-cool .cl-footer-icon { color: #7766AA; }
-        body.theme-cool .cl-footer-label { color: #6655AA; }
-        body.theme-cool .nav-arrow { color: #7766AA; }
-        body.theme-cool .nav-arrow:hover { color: #FF2D78; background-color: #1A1A3A; }
-        body.theme-cool .nav-arrow.disabled { color: #3A3060; }
-        body.theme-cool .nav-arrow.long-pressing { color: #FF2D78; background-color: #1A1A3A; }
-        body.theme-cool .nav-counter { color: #7766AA; }
-        body.theme-cool .nav-counter:hover { color: #FFE0F0; background-color: #1A1A3A; }
-        body.theme-cool .nav-jump-input { background: #12122A; border-color: #FF2D78; color: #FFE0F0; }
-        body.theme-cool .cl-seg-eng { color: #FFE0F0; }
-        body.theme-cool .cl-word.active { background-color: #FF2D78; color: #FFF; }
-        body.theme-cool .cl-card-overlay { color: #6655AA; }
-        body.theme-cool .cl-seg-chn { color: #8877AA; }
-        body.theme-cool .cl-cover-en { color: #FF2D78; }
-        body.theme-cool .cl-cover-zh { color: #D4A574; }
-        body.theme-cool .cl-cover-sub { color: #6655AA; }
-        body.theme-cool .cl-cover-tips-en { color: #81C784; }
-        body.theme-cool .cl-cover-tips-zh { color: #A5D6A7; }
-        body.theme-cool .cl-cover-footer-en { color: #6655AA; }
-        body.theme-cool .cl-cover-footer-zh { color: #554488; }
-        body.theme-cool kbd { background-color: #1A1A3A; color: #FFB74D; border-color: #3A3070; }
-        body.theme-cool .cl-audio-status-light { color: #FF2D78; }
-        body.theme-cool .cl-seg:hover { background-color: rgba(255, 45, 120, 0.08); }
-        body.theme-cool .cl-seg.playing-seg { background-color: rgba(255, 45, 120, 0.12); }
-        body.theme-cool #cl-settings-panel {
-            background-color: #0C0C20;
-            border-top-color: #252550;
-            color: #8877AA;
-        }
-        body.theme-cool .setting-divider { border-top-color: #252550; }
-        body.theme-cool .setting-action-btn { border-color: #3A3070; color: #8877AA; }
-        body.theme-cool .setting-action-btn:hover { background-color: #2A1535; }
-        body.theme-cool .pos-select { background: #12122A; color: #FF2D78; border-color: #3A3070; }
-        body.theme-cool .pos-select option { background: #12122A; color: #FF2D78; }
-        body.theme-cool .setting-row select {
-            background: #12122A !important;
-            color: #FF2D78 !important;
-            border-color: #3A3070 !important;
-        }
-        body.theme-cool .setting-row select option { background: #12122A; color: #FF2D78; }
-        body.theme-cool .theme-radio { color: #8877AA; }
-        body.theme-cool .theme-circle { border-color: #554488; }
-        body.theme-cool .theme-radio input:checked + .theme-circle { border-color: #FF2D78; }
-        body.theme-cool .theme-radio input:checked + .theme-circle::after { color: #FF2D78; }
-        body.theme-cool .setting-copyright { color: #FF2D78; }
+        /* Light Theme */
+        html:not(.dark) body { background-color: #FFFFFF; color: #222; }
+        html:not(.dark) .bg-background { background-color: #FFFFFF; }
+        html:not(.dark) .bg-surface-container-low { background-color: #F0F0F0; }
+        html:not(.dark) .bg-surface-container-high { background-color: #F8F8F8; }
+        html:not(.dark) .border-surface-variant { border-color: #CCC; }
+        html:not(.dark) .text-on-surface { color: #222; }
+        html:not(.dark) .text-on-surface-variant { color: #666; }
+        html:not(.dark) .text-primary { color: #116cc7; }
+        html:not(.dark) .text-secondary-fixed-dim { color: #116cc7; }
+        html:not(.dark) .glow-cyan { text-shadow: 0 0 10px rgba(17,108,199,0.2); }
+        html:not(.dark) .kbd-style { background-color: #E8E8E8; border-color: #CCC; color: #E65100; }
+        html:not(.dark) .learning-card { background: #FFFFFF; }
+        html:not(.dark) .settings-panel { background: #F5F5F5; }
+        html:not(.dark) .settings-panel-header { background: #EEE; }
+        html:not(.dark) .settings-label { color: #666; }
+        html:not(.dark) .settings-select { background: #F0F0F0; color: #116cc7; border-color: #CCC; }
+        html:not(.dark) .settings-select option { background: #FFF; color: #116cc7; }
+        html:not(.dark) .settings-action-btn { border-color: #CCC; color: #666; }
+        html:not(.dark) .settings-action-btn:hover { background-color: #FDE8E8; }
+        html:not(.dark) .settings-action-btn.login-btn:hover { background-color: #E8F5E9; }
+        html:not(.dark) .dropdown-item { color: #555; }
+        html:not(.dark) .dropdown-item:hover { background-color: #EBEBEB; color: #116cc7; }
+        html:not(.dark) .dropdown-item.current { color: #116cc7; }
+        html:not(.dark) #hub-dropdown-menu { background-color: #FFF; border-color: #CCC; }
+        html:not(.dark) .search-result-item { border-bottom-color: #E0E0E0; }
+        html:not(.dark) .search-result-item:hover { background-color: #F0F0F0; }
+        html:not(.dark) .settings-divider { border-top-color: #E0E0E0; }
+        html:not(.dark) .settings-copyright { color: #116cc7; }
+        html:not(.dark) #hub-search-input { color: #222; }
+        html:not(.dark) #hub-search-input::placeholder { color: #999; }
+        html:not(.dark) #hub-title { color: #555; }
+        html:not(.dark) #toast { background: #F0F0F0; border-color: #CCC; color: #222; }
+        html:not(.dark) .entry-en { color: #116cc7; }
+        html:not(.dark) .entry-zh { color: #666; }
+        html:not(.dark) .entry-line.playing-entry { background-color: rgba(17,108,199,0.08); }
     </style>
 </head>
-<body>
+<body class="flex flex-col h-screen font-body-md">
 
+<!-- ═══ 顶部标题栏（全宽） ═══ -->
+<div class="w-full h-[var(--titlebar-h)] flex items-center justify-between px-2 notepad-header select-none" style="-webkit-app-region:drag;">
+    <div class="flex items-center gap-2 h-full px-2">
+        <span class="font-label-md text-[12px] text-primary tracking-wider font-bold">cliplearn.ai</span>
+    </div>
+    <div class="flex h-full items-center">
+        <button id="btn-titlebar-close" class="flex items-center gap-1 px-3 title-bar-btn cursor-default h-full transition-colors text-on-surface-variant hover:text-secondary-fixed-dim" title="隐藏" style="-webkit-app-region:no-drag;">
+            <span class="material-symbols-outlined text-[16px]">remove</span>
+        </button>
+    </div>
+</div>
 
-    <div id="cl-card">
-
-        <!-- ═══ 核心显示区 ═══ -->
-        <div class="cl-main-body">
-            <div class="cl-card-overlay cl-card-num" id="card-num">00</div>
-            <div class="cl-card-overlay cl-card-time" id="card-time"></div>
-            <div class="cl-text-display-zone" id="display-zone">
-                <div id="segments-area">
-                    <div class="cl-cover-vision">
-                        <div class="cl-cover-sub">The Learning Revolution</div>
-                        <div class="cl-cover-en">Clip to Learn, Learn in Use</div>
-                        <div class="cl-cover-zh">截即学，用中学</div>
-                    </div>
-                    <div class="cl-cover-tagline">
-                        <div class="cl-cover-en">English Audio | English ↔ Chinese Translation</div>
-                        <div class="cl-cover-zh">英语语音，中英互译</div>
-                    </div>
-                    <div class="cl-cover-tagline">
-                        <div class="cl-cover-en">Store Cards. Learn with Ease</div>
-                        <div class="cl-cover-zh">卡片存储，轻松学习</div>
-                    </div>
-                    <div class="cl-cover-tips">
-                        <div class="cl-cover-tips-en">Window hidden, ready when needed</div>
-                        <div class="cl-cover-tips-zh">窗口隐藏，用时弹出</div>
-                    </div>
-                    <div class="cl-cover-footer">
-                        <div class="cl-cover-footer-en">Press <kbd>Ctrl+Shift+C</kbd>, drag a screen area, and activate your instant learning flow.</div>
-                        <div class="cl-cover-footer-zh">按 <kbd>Ctrl+Shift+C</kbd> 选区截图，即可开启即时截图学习流。</div>
-                    </div>
-                </div>
-                <span class="cl-audio-status-light" id="view-status">READY</span>
-            </div>
-        </div>
-
-        <!-- ═══ 底部工具栏：⚙️ 🗑 ◀ N/M ▶ ═══ -->
-        <div class="cl-footer">
-            <!-- 设置 -->
-            <div class="cl-footer-section settings-section" id="btn-settings" title="唤出卡片内置快捷菜单">
-                <span class="cl-footer-icon">⚙️</span>
-                <span class="cl-footer-label">设置</span>
-            </div>
-            <!-- 删除 / 清理 -->
-            <div class="cl-footer-section trash-section" id="btn-cleanup" title="单击删除当前卡片，长按一键清理失效缓存">
-                <span class="cl-footer-icon">🗑</span>
-                <span class="cl-footer-label">删除</span>
-            </div>
-            <!-- 导航：◀ N/M ▶ -->
-            <div class="cl-footer-section nav-section" id="nav-section">
-                <div class="nav-controls">
-                    <button class="nav-arrow" id="btn-prev" title="单击向前1张，长按快进">◀</button>
-                    <span class="nav-counter" id="nav-counter" title="点击输入序号跳转">0 / 0</span>
-                    <input class="nav-jump-input" id="nav-jump-input" type="number" min="1" style="display:none;" title="输入卡片序号，回车跳转">
-                    <button class="nav-arrow" id="btn-next" title="单击向后1张，长按快退">▶</button>
+<!-- ═══ 菜单栏（全宽） ═══ -->
+<div class="w-full h-8 flex items-center justify-between px-4 bg-surface-container-low relative z-50">
+    <div class="relative flex-1 flex justify-center items-center h-full">
+        <div id="hub-bar" class="absolute inset-0 flex items-center justify-between z-10 text-[12px] font-label-md">
+            <div class="relative flex items-center justify-center w-8 h-full flex-shrink-0">
+                <button id="hub-dropdown-btn" class="flex items-center justify-center w-full h-full text-on-surface-variant hover:text-secondary-fixed-dim transition-colors" title="切换笔记本">
+                    <svg width="14" height="10" viewBox="0 0 14 10"><polygon points="1,1 7,9 13,1" fill="currentColor"/></svg>
+                </button>
+                <div id="hub-dropdown-menu" class="hidden absolute top-full left-0 mt-0 bg-surface-container-high border border-surface-variant shadow-2xl z-50 min-w-[140px]">
+                    <div class="dropdown-item" data-nb="english">中↔英 Ctrl+Shift+C</div>
+                    <div class="dropdown-item" data-nb="chinese">Total</div>
+                    <div class="dropdown-item" data-nb="notebook1">1 Notebook Ctrl+Shift+1</div>
+                    <div class="dropdown-item" data-nb="notebook2">2 Notebook Ctrl+Shift+2</div>
+                    <div class="dropdown-item" data-nb="notebook3">3 Notebook Ctrl+Shift+3</div>
+                    <div class="dropdown-item" data-nb="notebook4">4 Notebook Ctrl+Shift+4</div>
+                    <div class="dropdown-item" data-nb="notebook5">5 Notebook Ctrl+Shift+5</div>
+                    <div class="dropdown-item" data-nb="notebook6">6 Notebook Ctrl+Shift+6</div>
+                    <div class="dropdown-item" data-nb="notebook7">7 Notebook Ctrl+Shift+7</div>
+                    <div class="dropdown-item" data-nb="notebook8">8 Notebook Ctrl+Shift+8</div>
+                    <div class="dropdown-item" data-nb="notebook9">9 Notebook Ctrl+Shift+9</div>
+                    <div class="dropdown-item" data-nb="notebook10">10 Notebook Ctrl+Shift+0</div>
+                    <div class="dropdown-item" data-nb="notebook11">11 Notebook Ctrl+Shift+11</div>
                 </div>
             </div>
+            <div id="hub-middle" class="flex-1 flex items-center justify-center mx-2 h-full relative">
+                <span id="hub-title" class="text-on-surface-variant tracking-wider cursor-default select-none">ENGLISH</span>
+                <input id="hub-search-input" class="hidden w-full bg-transparent border-0 border-b border-surface-variant p-0 py-1 text-[12px] text-on-surface placeholder-on-surface-variant/40 focus:ring-0 focus:outline-none text-center" type="text" placeholder="搜索本地数据库..." autocomplete="off">
+            </div>
+            <button id="hub-search-btn" class="flex items-center justify-center w-8 h-full text-on-surface-variant hover:text-secondary-fixed-dim transition-colors flex-shrink-0" title="搜索">
+                <span class="material-symbols-outlined text-[20px]">search</span>
+            </button>
         </div>
+    </div>
+    <div id="hub-search-results" class="absolute top-8 left-0 w-full bg-surface-container-high border-b border-surface-variant shadow-2xl hidden z-40 max-h-[250px] overflow-y-auto"></div>
+</div>
 
-        <!-- ═══ 设置面板（收纳低频功能） ═══ -->
-        <div id="cl-settings-panel">
-            <!-- 账户 -->
-            <div class="setting-row">
-                <span>账户</span>
-                <button class="setting-action-btn login-btn" id="btn-login">登录 / 注册</button>
+<!-- ═══ 卡片主体 + 底部工具栏 ═══ -->
+<div class="flex-1 relative overflow-hidden bg-background">
+
+    <!-- Card Stack (max-w-lg constrained) -->
+    <main class="h-full max-w-lg mx-auto relative overflow-hidden">
+        <div class="card-container" id="card-stack"></div>
+        <div id="toast"></div>
+        <div class="absolute bottom-20 left-6 flex items-center gap-2 z-30" id="ready-indicator" style="opacity:1;pointer-events:auto;">
+            <span id="view-status" class="font-label-md text-[11px] text-secondary-fixed-dim glow-cyan animate-pulse">READY</span>
+        </div>
+        <!-- Settings Panel -->
+        <div id="settings-panel" class="settings-panel">
+        <div class="settings-panel-header">
+            <span class="font-label-md text-[13px] text-secondary-fixed-dim">设置</span>
+            <button id="btn-settings-close" class="text-on-surface-variant hover:text-secondary-fixed transition-colors" title="关闭">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+        </div>
+        <div class="settings-panel-body">
+            <div class="settings-row">
+                <span class="settings-label">账户</span>
+                <button id="btn-login" class="settings-action-btn login-btn">登录 / 注册</button>
             </div>
-
-            <hr class="setting-divider">
-
-            <!-- 学习路线 -->
-            <div class="setting-row">
-                <span>学习路线</span>
-                <select id="course-route" style="background: #252525; color: #116cc7; border: 1px solid #333; border-radius: 4px; padding: 3px 6px; font-size: 11px; font-weight: bold; cursor: pointer; outline: none; font-family: inherit;">
-                    <option value="zh_en" style="background: #161616; color: #116cc7;">中文 → 英语</option>
-                    <option value="zh_tr_en" style="background: #161616; color: #116cc7;">繁体 → 英语</option>
+            <hr class="settings-divider"/>
+            <div class="settings-row">
+                <span class="settings-label">笔记更名</span>
+                <div class="flex items-center gap-2">
+                    <input id="rename-input" class="rename-text-input" type="text" placeholder="输入新名称...">
+                    <button id="btn-rename" class="settings-action-btn" style="padding:3px 10px;font-size:11px;">更名</button>
+                </div>
+            </div>
+            <hr class="settings-divider"/>
+            <div class="settings-row">
+                <span class="settings-label">学习路线</span>
+                <select id="course-route" class="settings-select">
+                    <option value="zh_en" selected="">中文 → 英语</option>
+                    <option value="zh_tr_en">繁体 → 英语</option>
                 </select>
             </div>
-
-            <!-- 学习内容 -->
-            <div class="setting-row">
-                <span>学习内容</span>
-                <select id="study-content" style="background: #252525; color: #116cc7; border: 1px solid #333; border-radius: 4px; padding: 3px 6px; font-size: 11px; font-weight: bold; cursor: pointer; outline: none; font-family: inherit; width:180px; text-align-last:right;">
-                    <option value="high1" style="background: #161616; color: #116cc7;">高中 · 第1册</option>
-                    <option value="high2" style="background: #161616; color: #116cc7;">高中 · 第2册</option>
-                    <option value="high3" style="background: #161616; color: #116cc7;">高中 · 第3册</option>
-                    <option value="cet4" style="background: #161616; color: #116cc7;">大学 · CET-4</option>
-                    <option value="cet6" style="background: #161616; color: #116cc7;">大学 · CET-6</option>
+            <div class="settings-row">
+                <span class="settings-label">学习内容</span>
+                <select id="study-content" class="settings-select">
+                    <option value="high1">高中 · 第1册</option>
+                    <option value="high2">高中 · 第2册</option>
+                    <option value="high3">高中 · 第3册</option>
+                    <option value="cet4" selected="">大学 · CET-4</option>
+                    <option value="cet6">大学 · CET-6</option>
                 </select>
             </div>
-
-            <!-- 颜色主题 -->
-            <div class="setting-row">
-                <span>颜色主题</span>
+            <div class="settings-row">
+                <span class="settings-label">颜色主题</span>
                 <div class="theme-options">
-                    <label class="theme-radio">
-                        <input type="radio" name="theme" value="dark" checked>
-                        <span class="theme-circle dark"></span>
-                        <span>深色</span>
-                    </label>
-                    <label class="theme-radio">
-                        <input type="radio" name="theme" value="light">
-                        <span class="theme-circle light"></span>
-                        <span>浅色</span>
-                    </label>
-                    <label class="theme-radio">
-                        <input type="radio" name="theme" value="cool">
-                        <span class="theme-circle cool"></span>
-                        <span>炫酷</span>
-                    </label>
+                    <label class="theme-radio"><input type="radio" name="theme" value="dark" checked=""/><span class="theme-swatch dark"></span><span>深色</span></label>
+                    <label class="theme-radio"><input type="radio" name="theme" value="light"/><span class="theme-swatch light"></span><span>浅色</span></label>
                 </div>
             </div>
-
-            <hr class="setting-divider">
-
-            <!-- 卡片定位 -->
-            <div class="setting-row">
-                <span>卡片定位</span>
-                <div class="position-selects">
-                    <select class="pos-select" id="pos-tens" title="十位">
-                        <option value="0" selected>十位 0</option>
-                        <option value="1">十位 1</option>
-                        <option value="2">十位 2</option>
-                        <option value="3">十位 3</option>
-                        <option value="4">十位 4</option>
-                        <option value="5">十位 5</option>
-                        <option value="6">十位 6</option>
-                        <option value="7">十位 7</option>
-                        <option value="8">十位 8</option>
-                        <option value="9">十位 9</option>
-                    </select>
-                    <select class="pos-select" id="pos-hundreds" title="百位">
-                        <option value="0" selected>百位 0</option>
-                        <option value="1">百位 1</option>
-                        <option value="2">百位 2</option>
-                        <option value="3">百位 3</option>
-                        <option value="4">百位 4</option>
-                        <option value="5">百位 5</option>
-                        <option value="6">百位 6</option>
-                        <option value="7">百位 7</option>
-                        <option value="8">百位 8</option>
-                        <option value="9">百位 9</option>
-                    </select>
-                    <select class="pos-select" id="pos-category" title="语类">
-                        <option value="none" selected>语类 无</option>
-                        <option value="archive">语类 存档</option>
-                        <option value="homophone">语类 同音</option>
-                        <option value="synonym">语类 近义</option>
-                        <option value="antonym">语类 反义</option>
-                        <option value="stem">语类 词干</option>
-                        <option value="prefix">语类 前缀</option>
-                        <option value="suffix">语类 后缀</option>
-                        <option value="verb">语类 动词</option>
-                    </select>
-                </div>
-            </div>
-
-            <hr class="setting-divider">
-
-            <!-- 官网 -->
-            <div class="setting-row">
-                <span>官网</span>
-                <a href="https://www.cliplearn.ai" target="_blank" style="color:#116cc7;text-decoration:none;font-size:11px;font-weight:bold;">cliplearn.ai</a>
-            </div>
-
-            <!-- 删除 -->
-            <div class="setting-row">
+            <hr class="settings-divider"/>
+            <div class="settings-row">
                 <span style="color:#CF6679;">删除当前卡片</span>
-                <button class="setting-action-btn" id="btn-delete-card">删除</button>
+                <button class="settings-action-btn" id="btn-delete-card" style="color:#CF6679;border-color:#CF6679;">删除</button>
             </div>
-
-            <!-- 版权 -->
-            <div class="setting-copyright">@ClipLearn 2026</div>
+            <div class="settings-row">
+                <span class="settings-label">官网</span>
+                <a href="https://www.cliplearn.ai" target="_blank" class="text-secondary-fixed-dim text-[12px] font-semibold no-underline hover:opacity-80">cliplearn.ai</a>
+            </div>
+            <div class="settings-copyright">@ClipLearn 2026</div>
         </div>
-
     </div>
 
-    <!-- ═══ 浮动 CL 徽标（关闭后显示） ═══ -->
-    <div id="cl-mini-badge" title="还原窗口">
-        <svg width="22" height="22" viewBox="0 0 36 36" style="display:block;">
-            <circle cx="18" cy="18" r="18" fill="#fff"/>
-            <path d="M20 8 C11 5, 5 12, 7 20 C8 25, 13 29, 20 28" stroke="#B71C1C" stroke-width="3.5" stroke-linecap="round" fill="none"/>
-            <path d="M20 10 L20 28 L27 28" stroke="#0D47A1" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-        </svg>
-    </div>
+    </main>
 
-    <script>
-        // ═══════════════════════════════════════════
-        // 0. localStorage 持久化
-        // ═══════════════════════════════════════════
-        const LS_KEY = 'cliplearn_records';
-        function loadRecords() {
-            try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; }
-            catch(e) { return []; }
+    <!-- Bottom Bar (全宽) -->
+    <nav class="absolute bottom-0 w-full h-12 flex justify-between items-center px-4 bg-surface-container-low z-40">
+        <div class="flex-shrink-0">
+            <button class="flex items-center justify-center text-on-surface-variant hover:text-secondary-fixed transition-all" id="btn-settings" title="设置">
+                <span class="material-symbols-outlined text-[22px]">settings</span>
+            </button>
+        </div>
+        <div class="flex flex-grow items-center justify-center gap-8 px-8">
+            <button class="text-on-surface-variant hover:text-secondary-fixed transition-all disabled:opacity-25" id="btn-prev">
+                <span class="material-symbols-outlined text-[24px] font-semibold">chevron_left</span>
+            </button>
+            <div class="flex items-center justify-center px-3 py-1">
+                <input class="w-10 bg-transparent border-none text-center font-label-md text-[15px] text-on-surface font-semibold focus:outline-none py-0 px-1 mr-1" id="current-index-input" maxlength="3" type="text" value="0"/>
+                <span class="font-label-md text-[15px] text-on-surface font-semibold tracking-widest opacity-60" id="total-count-display">/ 0</span>
+            </div>
+            <button class="text-on-surface-variant hover:text-secondary-fixed transition-all disabled:opacity-25" id="btn-next">
+                <span class="material-symbols-outlined text-[24px] font-semibold">chevron_right</span>
+            </button>
+        </div>
+        <div class="flex-shrink-0">
+            <button class="flex items-center justify-center text-on-surface-variant hover:text-secondary-fixed-dim transition-all" id="btn-selection-mode" title="选择模式">
+                <span class="material-symbols-outlined text-[22px]">playlist_add_check</span>
+            </button>
+        </div>
+    </nav>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// 0. Electron / Browser detection
+// ═══════════════════════════════════════════
+const isElectron = !!(window.electronAPI);
+
+(function() {
+    const p = new URLSearchParams(window.location.search);
+    const h = p.get('titlebar_h');
+    if (h) document.documentElement.style.setProperty('--titlebar-h', h + 'px');
+})();
+
+const btnTitleClose = document.getElementById('btn-titlebar-close');
+if (btnTitleClose) {
+    btnTitleClose.onclick = () => { if (isElectron) window.electronAPI.closeToMini(); };
+}
+
+if (isElectron) {
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'c') {
+            e.preventDefault(); window.electronAPI.startScreenshot();
         }
-        function saveRecords(records) {
-            try { localStorage.setItem(LS_KEY, JSON.stringify(records)); }
-            catch(e) { console.warn('localStorage 已满'); }
-        }
-        function upsertRecord(record) {
-            const records = loadRecords();
-            const idx = records.findIndex(r => r.id === record.id);
-            if (idx >= 0) records[idx] = record;
-            else records.unshift(record);
-            if (records.length > 100) records.length = 100;
-            saveRecords(records);
-        }
-        function removeRecord(id) {
-            let records = loadRecords();
-            records = records.filter(r => r.id !== id);
-            saveRecords(records);
-        }
+    });
+    window.electronAPI.onScreenshotCaptured((dataUrl) => { submitScreenshot(dataUrl); });
+}
 
-        // ═══════════════════════════════════════════
-        // 1. 窗口控制 — ✕ 关闭 / 浮动图标还原
-        //    在 Electron 中通过 IPC 控制原生窗口
-        //    在浏览器中通过 DOM 模拟
-        // ═══════════════════════════════════════════
-        const clCard = document.getElementById('cl-card');
-        const miniBadge = document.getElementById('cl-mini-badge');
-        const isElectron = !!(window.electronAPI);
+// ═══════════════════════════════════════════
+// 1. Multi-Notebook Data Layer
+// ═══════════════════════════════════════════
+const NB_STORAGE_KEY = 'cliplearn_notebooks';
+const NB_ACTIVE_KEY = 'cliplearn_active_notebook';
+const CARD_MAX_WORDS = 80;
 
-        miniBadge.onclick = () => {
-            if (isElectron) {
-                // Electron 原生徽标窗口处理还原，这里不操作
-            } else {
-                miniBadge.style.display = 'none';
-                clCard.style.display = 'flex';
-            }
-        };
+let notebooks = {};
+let activeNotebook = 'english';
+let arrayIndex = 0;
+let isSelectionMode = false;
+let nbCustomNames = {};
 
-        // 隐藏浏览器模式下的 mini-badge（Electron 有原生徽标窗口）
-        if (isElectron) {
-            miniBadge.style.display = 'none';
+function nbLabel(key) {
+    if (nbCustomNames[key]) return nbCustomNames[key];
+    if (key === 'english') return '中↔英 Ctrl+Shift+C';
+    if (key === 'chinese') return 'TOTAL';
+    const num = key.replace('notebook', '');
+    return num + ' Notebook Ctrl+Shift+' + (num === '10' ? '0' : num);
+}
 
-            document.addEventListener('keydown', (e) => {
-                if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'c') {
-                    e.preventDefault();
-                    window.electronAPI.startScreenshot();
-                }
+function loadAll() {
+    try { nbCustomNames = JSON.parse(localStorage.getItem('cliplearn_nb_names')) || {}; } catch(e) { nbCustomNames = {}; }
+    try {
+        const raw = localStorage.getItem(NB_STORAGE_KEY);
+        if (raw) notebooks = JSON.parse(raw);
+    } catch(e) { notebooks = {}; }
+    if (!notebooks.english || !notebooks.english.cards) {
+        notebooks.english = { cards: [], currentCardIdx: 0 };
+    }
+    activeNotebook = localStorage.getItem(NB_ACTIVE_KEY) || 'english';
+}
+
+function saveNbNames() { try { localStorage.setItem('cliplearn_nb_names', JSON.stringify(nbCustomNames)); } catch(e) {} }
+function saveNotebooks() { try { localStorage.setItem(NB_STORAGE_KEY, JSON.stringify(notebooks)); } catch(e) {} }
+
+function currentNb() {
+    if (!notebooks[activeNotebook]) notebooks[activeNotebook] = { cards: [], currentCardIdx: 0 };
+    return notebooks[activeNotebook];
+}
+function nbCardCount() { return (currentNb().cards || []).length; }
+
+function appendTextToCurrentCard(eng, chn, rid) {
+    const words = eng.trim().split(/\s+/);
+    const truncated = words.length > CARD_MAX_WORDS ? words.slice(0, CARD_MAX_WORDS).join(' ') : eng;
+    const nb = currentNb();
+    if (!nb.cards) nb.cards = [];
+    const last = nb.cards.length > 0 ? nb.cards[nb.cards.length - 1] : null;
+    const lastWords = last ? (last.entries || []).reduce((s, e) => s + (e.en||'').split(/\s+/).length, 0) : 0;
+    const newWords = truncated.split(/\s+/).length;
+    if (!last || (lastWords > 0 && lastWords + newWords > CARD_MAX_WORDS)) {
+        nb.cards.push({ num: nb.cards.length + 1, entries: [{ en: truncated, zh: chn, rid: rid }], created_at: Date.now() / 1000 });
+    } else {
+        if (!last.entries) last.entries = [];
+        last.entries.push({ en: truncated, zh: chn, rid: rid });
+    }
+    nb.currentCardIdx = nb.cards.length;
+    saveNotebooks();
+    rebuildCardStack();
+}
+
+// ═══════════════════════════════════════════
+// 2. Hub Bar (▼ dropdown / title / 🔍 search)
+// ═══════════════════════════════════════════
+const hubTitle = document.getElementById('hub-title');
+const hubDropdownBtn = document.getElementById('hub-dropdown-btn');
+const hubDropdownMenu = document.getElementById('hub-dropdown-menu');
+const hubSearchInput = document.getElementById('hub-search-input');
+const hubSearchBtn = document.getElementById('hub-search-btn');
+const hubResults = document.getElementById('hub-search-results');
+const viewStatus = document.getElementById('view-status');
+let hubMode = null;
+let searchDebounceTimer = null;
+
+function closeDropdown() { hubDropdownMenu.classList.add('hidden'); hubDropdownBtn.classList.remove('text-secondary-fixed-dim'); }
+function closeSearch()   { hubSearchInput.classList.add('hidden'); hubSearchBtn.classList.remove('text-secondary-fixed-dim'); hubResults.classList.add('hidden'); hubTitle.classList.remove('hidden'); }
+function resetMiddle()   { closeDropdown(); closeSearch(); hubMode = null; }
+
+function markCurrentInMenu() {
+    hubDropdownMenu.querySelectorAll('.dropdown-item').forEach(item => {
+        item.classList.toggle('current', item.getAttribute('data-nb') === activeNotebook);
+    });
+}
+
+hubDropdownBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (hubMode === 'dropdown') { resetMiddle(); return; }
+    resetMiddle();
+    hubMode = 'dropdown';
+    markCurrentInMenu();
+    hubDropdownMenu.classList.remove('hidden');
+    hubDropdownBtn.classList.add('text-secondary-fixed-dim');
+});
+
+hubSearchBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (hubMode === 'search') { resetMiddle(); return; }
+    resetMiddle();
+    hubMode = 'search';
+    hubTitle.classList.add('hidden');
+    hubSearchInput.classList.remove('hidden');
+    hubSearchBtn.classList.add('text-secondary-fixed-dim');
+    setTimeout(() => hubSearchInput.focus(), 150);
+});
+
+hubDropdownMenu.addEventListener('click', (e) => {
+    const item = e.target.closest('.dropdown-item');
+    if (!item) return;
+    const nbKey = item.getAttribute('data-nb');
+    if (nbKey === activeNotebook) { resetMiddle(); return; }
+    switchNotebook(nbKey);
+    resetMiddle();
+});
+
+function updateSearchPlaceholder() {
+    const label = nbLabel(activeNotebook);
+    hubSearchInput.placeholder = activeNotebook === 'chinese'
+        ? '搜索范围：Total，Notebook1~11等，本地数据库'
+        : '搜索范围：' + label + '，本地数据库';
+}
+
+function highlightMatch(text, query) {
+    if (!query || !text) return text;
+    const esc = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return text.replace(new RegExp(`(${esc})`, 'gi'), '<span class="search-result-highlight">$1</span>');
+}
+
+async function doSearch(query) {
+    const q = (query || '').trim().toLowerCase();
+    if (!q) { hubResults.classList.add('hidden'); hubResults.innerHTML = ''; return; }
+    let pool = [];
+    if (activeNotebook === 'chinese') {
+        Object.keys(notebooks).forEach(k => {
+            (notebooks[k].cards || []).forEach(card => {
+                (card.entries || []).forEach(e => pool.push({ en: e.en, zh: e.zh, source: k }));
             });
-        }
+        });
+    } else {
+        (currentNb().cards || []).forEach(card => {
+            (card.entries || []).forEach(e => pool.push({ en: e.en, zh: e.zh }));
+        });
+    }
+    const matched = pool.filter(r => (r.en||'').toLowerCase().includes(q) || (r.zh||'').toLowerCase().includes(q));
+    hubResults.classList.remove('hidden');
+    if (!matched.length) {
+        hubResults.innerHTML = '<div class="p-4 text-center font-label-md text-[12px] text-on-surface-variant">未找到匹配记录</div>';
+        return;
+    }
+    hubResults.innerHTML = matched.slice(0, 20).map(r => `
+        <div class="search-result-item" onclick="searchResultClick(this)" data-en="${r.en.replace(/"/g,'&quot;')}" data-zh="${r.zh.replace(/"/g,'&quot;')}">
+            <div class="text-[13px] text-primary font-semibold">${highlightMatch(r.en, q)}</div>
+            <div class="text-[11px] text-on-surface-variant mt-1">${highlightMatch(r.zh, q)}</div>
+            ${r.source ? `<div class="text-[9px] text-secondary-fixed-dim mt-1 opacity-50">来自: ${nbLabel(r.source)}</div>` : ''}
+        </div>`).join('');
+}
+window.searchResultClick = function(el) { hubResults.classList.add('hidden'); hubSearchInput.value = ''; resetMiddle(); };
 
-        // ═══════════════════════════════════════════
-        // 2. 设置面板
-        // ═══════════════════════════════════════════
-        // 登录
-        document.getElementById('btn-login').onclick = (e) => {
-            e.stopPropagation();
-            const btn = document.getElementById('btn-login');
-            btn.classList.toggle('logged-in');
-            btn.textContent = btn.classList.contains('logged-in') ? '已登录 ✓' : '登录 / 注册';
-            btn.style.color = btn.classList.contains('logged-in') ? '#4CAF50' : '';
-        };
+hubSearchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch(hubSearchInput.value); });
+hubSearchInput.addEventListener('blur', () => {
+    setTimeout(() => { if (document.activeElement !== hubSearchInput && hubMode === 'search') resetMiddle(); }, 200);
+});
+hubSearchInput.addEventListener('input', () => {
+    if (!hubSearchInput.value.trim()) { hubResults.classList.add('hidden'); return; }
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => doSearch(hubSearchInput.value), 300);
+});
+document.addEventListener('click', (e) => {
+    if (hubMode === 'dropdown' && !hubDropdownBtn.contains(e.target) && !hubDropdownMenu.contains(e.target)) resetMiddle();
+});
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && hubMode) { hubSearchInput.value = ''; hubSearchInput.blur(); resetMiddle(); }
+});
 
-        // ═══════════════════════════════════════════
-        // 3. 音频核心 & 卡片系统
-        // ═══════════════════════════════════════════
-        let audioFemale = null;   // 第 1、3 遍 — 女声 (Edge-TTS Jenny)
-        let audioMale = null;     // 第 2 遍     — 男声 (Edge-TTS Guy)
-        let repeatCount = 0;
-        let repeatTarget = 3;
-        let isPlaying = false;
-        let wordSpans = [];
-        let wordHighlightTimer = null;
-        let wordOffset = 0;         // 当前段落在 wordSpans 中的起始偏移
-        let segmentWordCount = 0;   // 当前播放段落的词数
-        const PAUSE_MS = 2000;
-        const CARD_MAX_WORDS = 80;
-        const VOICE_LABELS = ['', '♀', '♂', '♀']; // ♀ ♂ ♀
+function switchNotebook(nbKey) {
+    if (!notebooks[activeNotebook]) notebooks[activeNotebook] = { cards: [], currentCardIdx: 0 };
+    notebooks[activeNotebook].currentCardIdx = arrayIndex;
+    activeNotebook = nbKey;
+    localStorage.setItem(NB_ACTIVE_KEY, activeNotebook);
+    hubTitle.textContent = nbLabel(activeNotebook);
+    updateSearchPlaceholder();
+    if (!notebooks[activeNotebook]) notebooks[activeNotebook] = { cards: [], currentCardIdx: 0 };
+    notebooks[activeNotebook].currentCardIdx = Math.min(notebooks[activeNotebook].currentCardIdx || 0, nbCardCount());
+    stopAudio();
+    rebuildCardStack();
+}
 
-        const viewStatus = document.getElementById('view-status');
-        const segmentsArea = document.getElementById('segments-area');
-        const cardNumEl = document.getElementById('card-num');
-        const cardTimeEl = document.getElementById('card-time');
+// ═══════════════════════════════════════════
+// 3. Cover & Card Rendering
+// ═══════════════════════════════════════════
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-        // ── 卡片集合 ──
-        let cards = [];            // [{num, texts:[], chns:[], rids:[], created_at}]
-        let currentCardIdx = 0;
+function makeCoverHTML(nbKey) {
+    const isEnglish = nbKey === 'english';
+    const isTotal = nbKey === 'chinese';
+    if (isTotal) {
+        return `<section class="learning-card active" id="card-0">
+          <div class="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center opacity-10"><div class="w-[200px] h-[200px] bg-secondary-fixed-dim rounded-full blur-[100px]"></div></div>
+          <div class="z-10 flex flex-col space-y-stack-lg max-w-lg">
+            <section class="space-y-stack-sm">
+              <h2 class="font-label-md text-[10px] text-on-surface-variant tracking-[0.2em] opacity-50 uppercase">The Learning Revolution</h2>
+              <div class="space-y-unit"><h1 class="font-headline-lg text-secondary-fixed-dim glow-cyan text-[28px]">Clip to Learn, Learn in Use</h1><p class="font-body-sm text-on-surface opacity-80">截即学，用中学</p></div>
+            </section>
+            <section class="space-y-stack-sm pt-6">
+              <p class="font-label-md text-[14px] text-secondary-fixed-dim glow-cyan">TOTAL: Search local database</p>
+              <p class="font-body-sm text-on-surface-variant opacity-70">total：搜索本地数据库</p>
+            </section>
+          </div></section>`;
+    }
+    if (isEnglish) {
+        return `<section class="learning-card active" id="card-0">
+          <div class="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center opacity-10"><div class="w-[200px] h-[200px] bg-secondary-fixed-dim rounded-full blur-[100px]"></div></div>
+          <div class="z-10 flex flex-col space-y-stack-lg max-w-lg">
+            <section class="space-y-stack-sm">
+              <h2 class="font-label-md text-[10px] text-on-surface-variant tracking-[0.2em] opacity-50 uppercase">The Learning Revolution</h2>
+              <div class="space-y-unit"><h1 class="font-headline-lg text-secondary-fixed-dim glow-cyan text-[28px]">Clip to Learn, Learn in Use</h1><p class="font-body-sm text-on-surface opacity-80">截即学，用中学</p></div>
+            </section>
+            <div class="space-y-stack-md"><section class="space-y-unit"><h3 class="font-body-md font-semibold text-secondary-fixed-dim text-[22px] whitespace-nowrap">English Audio | English ↔ Chinese Translation</h3><p class="font-body-sm text-on-surface-variant opacity-70">英语语音，中英互译</p></section></div>
+            <section class="space-y-unit py-unit"><p class="font-label-md text-[13px] text-green-400 glow-green uppercase tracking-wider">Store Cards. Learn with Ease</p><p class="font-body-sm text-green-400 opacity-80">卡片存储，轻松学习</p></section>
+            <section class="space-y-stack-sm pt-2"><p class="font-body-sm text-on-surface-variant">Hide the window, auto-popup when in use.<br/>隐藏窗口，用时弹出</p></section>
+            <section class="space-y-stack-sm pt-2"><p class="font-body-sm text-on-surface-variant">Press <span class="kbd-style font-label-md text-[11px]">Ctrl+Shift+C</span>, drag a screen area, and let ClipLearn read it three times.<br/>按 <span class="kbd-style font-label-md text-[11px]">Ctrl+Shift+C</span> 选区截图，即可触发本地截图学习流。</p></section>
+          </div></section>`;
+    }
+    const nbName = nbLabel(nbKey);
+    return `<section class="learning-card active" id="card-0">
+      <div class="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center opacity-10"><div class="w-[200px] h-[200px] bg-secondary-fixed-dim rounded-full blur-[100px]"></div></div>
+      <div class="z-10 flex flex-col space-y-stack-lg max-w-lg">
+        <section class="space-y-stack-sm">
+          <h2 class="font-label-md text-[10px] text-on-surface-variant tracking-[0.2em] opacity-50 uppercase">The Learning Revolution</h2>
+          <div class="space-y-unit"><h1 class="font-headline-lg text-secondary-fixed-dim glow-cyan text-[28px]">${escHtml(nbName)}</h1></div>
+        </section>
+        <section class="space-y-stack-sm pt-2"><h3 class="font-body-md font-semibold text-secondary-fixed-dim text-[18px]">即截即存：Clip to Save</h3></section>
+        <section class="space-y-stack-sm pt-4"><p class="font-body-sm text-on-surface-variant">分类检索：Categorized Search</p></section>
+        <section class="space-y-stack-sm pt-4"><p class="font-body-sm text-on-surface-variant">本地存贮：Local Storage</p></section>
+        <section class="space-y-stack-sm pt-4"><p class="font-body-sm text-on-surface-variant">保护隐私：Privacy Protection</p></section>
+      </div></section>`;
+}
 
-        const LS_CARDS = 'cliplearn_cards';
+function cardHTML(card, cardNum) {
+    const numStr = String(cardNum).padStart(2, '0');
+    const timeStr = card.created_at ? new Date(card.created_at * 1000).toLocaleDateString('zh-CN') : '';
+    let entriesHTML = '';
+    (card.entries || []).forEach((e, ei) => {
+        entriesHTML += `<div class="entry-line" data-entry-index="${ei}">
+          <div class="entry-en">${escHtml(e.en)}</div>
+          ${e.zh ? `<div class="entry-zh">${escHtml(e.zh)}</div>` : ''}
+        </div>`;
+    });
+    return `<span class="absolute top-6 right-6 font-label-md text-secondary-fixed-dim opacity-50 text-[13px]">${numStr}</span>
+      <div class="w-full max-w-xs text-left">${entriesHTML}</div>
+      ${timeStr ? `<div class="absolute bottom-16 right-6 opacity-30 font-label-md text-[11px]">${timeStr}</div>` : ''}`;
+}
 
-        function persistCards() {
-            try { localStorage.setItem(LS_CARDS, JSON.stringify({ cards, currentCardIdx })); }
-            catch(e) {}
-        }
+function rebuildCardStack() {
+    const nb = currentNb();
+    const cards = nb.cards || [];
+    arrayIndex = nb.currentCardIdx || 0;
+    const stack = document.getElementById('card-stack');
+    stack.innerHTML = makeCoverHTML(activeNotebook);
+    cards.forEach((card, ci) => {
+        const cardNum = ci + 1;
+        const sec = document.createElement('section');
+        sec.className = 'learning-card';
+        sec.id = 'card-' + cardNum;
+        sec.innerHTML = cardHTML(card, cardNum);
+        stack.appendChild(sec);
+    });
+    const activeCard = document.getElementById('card-' + (arrayIndex === 0 ? 0 : arrayIndex));
+    if (activeCard) { activeCard.style.display = 'flex'; activeCard.classList.add('active'); }
+    updateNav();
+    preloadLastEntryAudio();
+}
 
-        function initCards() {
-            let loaded = false;
-            try {
-                const saved = localStorage.getItem(LS_CARDS);
-                if (saved) {
-                    const data = JSON.parse(saved);
-                    cards = (data.cards || []).map((c, i) => ({
-                        num: c.num != null ? c.num : i + 1,
-                        texts: Array.isArray(c.texts) ? c.texts : [],
-                        chns: Array.isArray(c.chns) ? c.chns : [],
-                        rids: Array.isArray(c.rids) ? c.rids : [],
-                        created_at: c.created_at || (Date.now() / 1000)
-                    }));
-                    currentCardIdx = (data.currentCardIdx >= 0 && data.currentCardIdx < cards.length)
-                        ? data.currentCardIdx : 0;
-                    loaded = cards.length > 0;
-                }
-            } catch(e) { cards = []; }
-            if (!loaded || cards.length === 0) {
-                cards = [{ num: 0, texts: [], chns: [], rids: [], created_at: Date.now() / 1000 }];
-                currentCardIdx = 0;
-            }
-            if (currentCardIdx >= cards.length) currentCardIdx = Math.max(0, cards.length - 1);
-            if (currentCardIdx < 0) currentCardIdx = 0;
-            refreshCardDisplay();
-            preloadCardAudio();
-            // 异步获取 SQLite 总数
-            fetchSqliteCount();
-        }
+// ═══════════════════════════════════════════
+// 4. Audio System (Edge-TTS ♀/♂, 3-rep loop)
+// ═══════════════════════════════════════════
+let audioFemale = null, audioMale = null;
+let repeatCount = 0, isPlaying = false;
+let currentEntryIndex = -1;
+const PAUSE_MS = 2000;
+const VOICE_LABELS = ['', '♀', '♂', '♀'];
 
-        function currentCard() {
-            if (cards.length === 0) {
-                cards.push({ num: 0, texts: [], chns: [], rids: [], created_at: Date.now() / 1000 });
-                currentCardIdx = 0;
-            }
-            if (currentCardIdx >= cards.length) currentCardIdx = Math.max(0, cards.length - 1);
-            if (currentCardIdx < 0) currentCardIdx = 0;
-            const card = cards[currentCardIdx];
-            if (!card) {
-                cards[currentCardIdx] = { num: currentCardIdx + 1, texts: [], chns: [], rids: [], created_at: Date.now() / 1000 };
-                return cards[currentCardIdx];
-            }
-            return card;
-        }
+function getCurrentAudio() { return repeatCount % 2 === 0 ? audioFemale : audioMale; }
 
-        function cardLastRid(card) {
-            const rids = card.rids || [];
-            return rids.length > 0 ? rids[rids.length - 1] : null;
-        }
+function preloadLastEntryAudio() {
+    stopAudio();
+    const nb = currentNb();
+    if (!nb.cards || nb.cards.length === 0) return;
+    const lastCard = nb.cards[nb.cards.length - 1];
+    if (!lastCard.entries || lastCard.entries.length === 0) return;
+    const lastEntry = lastCard.entries[lastCard.entries.length - 1];
+    if (!lastEntry.rid) return;
+    audioFemale = new Audio('/api/audio/' + lastEntry.rid);
+    audioFemale.addEventListener('ended', onAudioEnded);
+    audioMale = new Audio('/api/audio/' + lastEntry.rid + '/male');
+    audioMale.addEventListener('ended', onAudioEnded);
+    audioMale.load();
+}
 
-        function cardWordCount(card) {
-            return card.texts.reduce((sum, t) => sum + t.trim().split(/\s+/).length, 0);
-        }
+function highlightEntry(cardIdx, entryIdx) {
+    const cardEl = document.getElementById('card-' + (cardIdx + 1));
+    if (!cardEl) return;
+    cardEl.querySelectorAll('.entry-line').forEach(el => el.classList.remove('playing-entry'));
+    const entryEl = cardEl.querySelector('.entry-line[data-entry-index="' + entryIdx + '"]');
+    if (entryEl) entryEl.classList.add('playing-entry');
+}
 
-        function cardCombinedText(card) {
-            return card.texts.join('\n\n');
-        }
+function clearEntryHighlight() {
+    document.querySelectorAll('.entry-line').forEach(el => el.classList.remove('playing-entry'));
+}
 
-        function cardCombinedChinese(card) {
-            return card.chns.join('\n\n');
-        }
+function playEntryInCurrentCard(entryIdx) {
+    const nb = currentNb();
+    if (arrayIndex === 0 || !nb.cards) return;
+    const cardIdx = arrayIndex - 1;
+    if (cardIdx >= nb.cards.length) return;
+    const card = nb.cards[cardIdx];
+    if (!card.entries || entryIdx >= card.entries.length) return;
+    const entry = card.entries[entryIdx];
+    if (!entry.rid) return;
+    startAudioSequence('/api/audio/' + entry.rid, entry.rid, cardIdx, entryIdx);
+}
 
-        function formatTime(ts) {
-            const d = new Date(ts * 1000);
-            return d.getFullYear() + '/' +
-                   String(d.getMonth() + 1).padStart(2, '0') + '/' +
-                   String(d.getDate()).padStart(2, '0');
-        }
+function startAudioSequence(audioUrlFemale, recordId, cardIdx, entryIdx) {
+    stopAudio();
+    currentEntryIndex = entryIdx;
+    highlightEntry(cardIdx, entryIdx);
+    audioFemale = new Audio(audioUrlFemale);
+    audioFemale.addEventListener('ended', onAudioEnded);
+    audioMale = new Audio('/api/audio/' + recordId + '/male');
+    audioMale.addEventListener('ended', onAudioEnded);
+    audioMale.load();
+    repeatCount = 0;
+    isPlaying = true;
+    viewStatus.innerText = 'PLAYING [1/3] ♀';
+    audioFemale.play();
+}
 
-        function refreshCardDisplay() {
-            const card = currentCard();
-            const n = (card && card.num != null) ? card.num : (currentCardIdx + 1);
-            cardNumEl.textContent = String(n).padStart(2, '0');
-            cardTimeEl.textContent = formatTime((card && card.created_at) ? card.created_at : (Date.now() / 1000));
-            renderAllSegments(card);
-        }
-
-        function preloadCardAudio() {
-            const rid = cardLastRid(currentCard());
-            if (!rid) return;
-            stopAudio();
-            audioFemale = new Audio('/api/audio/' + rid);
-            audioFemale.addEventListener('ended', onAudioEnded);
-            audioFemale.addEventListener('play', startWordTracking);
-            audioMale = new Audio('/api/audio/' + rid + '/male');
-            audioMale.addEventListener('ended', onAudioEnded);
-            audioMale.addEventListener('play', startWordTracking);
-            audioMale.load();
-        }
-
-        function truncateEngAtBreak(eng, maxWords) {
-            const words = eng.trim().split(/\s+/);
-            if (words.length <= maxWords) return eng;
-            // 在前 maxWords 词内从后往前找最近的断句点
-            const window = words.slice(0, maxWords).join(' ');
-            for (let i = window.length - 1; i >= 0; i--) {
-                const ch = window[i];
-                if (ch === '.' || ch === '?' || ch === '!' || ch === ',') {
-                    return window.substring(0, i + 1);
-                }
-            }
-            // 无标点则取最后完整词
-            return window.substring(0, window.lastIndexOf(' '));
-        }
-
-        function appendTextToCard(eng, chn, rid) {
-            // 一次截图的英文必须在同一张卡：超过 80 词则句尾/逗点截断
-            eng = truncateEngAtBreak(eng, CARD_MAX_WORDS);
-            const newWords = eng.trim().split(/\s+/).length;
-
-            // 英文进入卡片（完整放、不拆），中文译文可跨卡、保持完整
-            const card = currentCard();
-            const currentWords = cardWordCount(card);
-
-            if (currentWords > 0 && currentWords + newWords > CARD_MAX_WORDS) {
-                // 当前卡没空间 → 英文+中文完整进新卡
-                cards.push({
-                    num: cards.length,
-                    texts: [eng],
-                    chns: [chn],
-                    rids: rid ? [rid] : [],
-                    created_at: Date.now() / 1000
-                });
-                currentCardIdx = cards.length - 1;
-            } else {
-                card.texts.push(eng);
-                card.chns.push(chn);
-                if (!card.rids) card.rids = [];
-                if (rid) card.rids.push(rid);
-            }
-
-            // wordOffset = 所有旧词的个数，供高亮定位
-            wordOffset = cardWordCount(currentCard()) - newWords;
-            if (wordOffset < 0) wordOffset = 0;
-            segmentWordCount = newWords;
-
-            persistCards();
-            refreshCardDisplay();
-        }
-
-        let segWordStarts = [];    // 每段在 wordSpans 中的起始索引
-        let currentSegIndex = -1;  // 当前正在播放的段落索引
-
-        function renderAllSegments(card) {
-            wordSpans = [];
-            segWordStarts = [];
-            segmentsArea.innerHTML = '';
-            // 有真实截图内容时顶部对齐，空/封面时居中
-            const mainBody = document.querySelector('.cl-main-body');
-            if (card && card.texts && card.texts.length > 0) {
-                mainBody.classList.add('has-content');
-            } else {
-                mainBody.classList.remove('has-content');
-            }
-
-            if (!card || card.texts.length === 0) {
-                // 封面首页 — 全学科封面
-                const html =
-                    '<div class="cl-cover-vision">' +
-                        '<div class="cl-cover-sub">The Learning Revolution</div>' +
-                        '<div class="cl-cover-en">Clip to Learn, Learn in Use</div>' +
-                        '<div class="cl-cover-zh">截即学，用中学</div>' +
-                    '</div>' +
-                    '<div class="cl-cover-tagline">' +
-                        '<div class="cl-cover-en">English Audio | English ↔ Chinese Translation</div>' +
-                        '<div class="cl-cover-zh">英语语音，中英互译</div>' +
-                    '</div>' +
-                    '<div class="cl-cover-tagline">' +
-                        '<div class="cl-cover-en">Store Cards. Learn with Ease</div>' +
-                        '<div class="cl-cover-zh">卡片存储，轻松学习</div>' +
-                    '</div>' +
-                    '<div class="cl-cover-tips">' +
-                        '<div class="cl-cover-tips-en">Window hidden, ready when needed</div>' +
-                        '<div class="cl-cover-tips-zh">窗口隐藏，用时弹出</div>' +
-                    '</div>' +
-                    '<div class="cl-cover-footer">' +
-                        '<div class="cl-cover-footer-en">Press <kbd>Ctrl+Shift+C</kbd>, drag a screen area, and activate your instant learning flow.</div>' +
-                        '<div class="cl-cover-footer-zh">按 <kbd>Ctrl+Shift+C</kbd> 选区截图，即可开启即时截图学习流。</div>' +
-                    '</div>';
-                segmentsArea.innerHTML = html;
-                return;
-            }
-
-            let wordIdx = 0;
-            card.texts.forEach((eng, i) => {
-                segWordStarts.push(wordIdx);
-                const chn = (card.chns && card.chns[i]) ? card.chns[i] : '';
-
-                const segDiv = document.createElement('div');
-                segDiv.className = 'cl-seg';
-                segDiv.setAttribute('data-seg-index', i);
-
-                // 英文行
-                const engDiv = document.createElement('div');
-                engDiv.className = 'cl-seg-eng';
-                const words = eng.trim().split(/\s+/);
-                words.forEach((w, wi) => {
-                    const span = document.createElement('span');
-                    span.className = 'cl-word';
-                    span.textContent = w;
-                    engDiv.appendChild(span);
-                    wordSpans.push(span);
-                    if (wi < words.length - 1) {
-                        engDiv.appendChild(document.createTextNode(' '));
-                    }
-                });
-                segDiv.appendChild(engDiv);
-
-                // 中文行
-                if (chn) {
-                    const chnDiv = document.createElement('div');
-                    chnDiv.className = 'cl-seg-chn';
-                    chnDiv.textContent = chn;
-                    segDiv.appendChild(chnDiv);
-                }
-
-                wordIdx += words.length;
-                segmentsArea.appendChild(segDiv);
-            });
-        }
-
-        function highlightSeg(segIdx) {
-            segmentsArea.querySelectorAll('.cl-seg').forEach(s => s.classList.remove('playing-seg'));
-            const seg = segmentsArea.querySelector('.cl-seg[data-seg-index="' + segIdx + '"]');
-            if (seg) seg.classList.add('playing-seg');
-        }
-
-        function highlightWord(wordIndex) {
-            wordSpans.forEach((s, i) => s.classList.toggle('active', i === wordIndex));
-        }
-
-        function clearHighlight() {
-            wordSpans.forEach(s => s.classList.remove('active'));
-        }
-
-        function getCurrentAudio() {
-            return repeatCount % 2 === 0 ? audioFemale : audioMale;
-        }
-
-        function startWordTracking() {
+function onAudioEnded() {
+    clearEntryHighlight();
+    repeatCount++;
+    if (repeatCount < 3) {
+        const voice = VOICE_LABELS[repeatCount + 1];
+        viewStatus.innerText = 'PAUSE [' + (repeatCount + 1) + '/3]';
+        setTimeout(() => {
+            if (!isPlaying) return;
             const a = getCurrentAudio();
-            if (!a || wordSpans.length === 0 || segmentWordCount === 0) return;
-            function tick() {
-                const cur = getCurrentAudio();
-                if (!cur || cur.paused) { wordHighlightTimer = requestAnimationFrame(tick); return; }
-                const raw = cur.duration > 0 ? cur.currentTime / cur.duration : 0;
-                const progress = Math.min(raw + 0.02, 1.0);
-                const segIdx = Math.min(Math.floor(progress * segmentWordCount), segmentWordCount - 1);
-                const idx = Math.min(wordOffset + segIdx, wordSpans.length - 1);
-                highlightWord(idx);
-                wordHighlightTimer = requestAnimationFrame(tick);
+            if (!a) return;
+            a.currentTime = 0;
+            viewStatus.innerText = 'PLAYING [' + (repeatCount + 1) + '/3] ' + voice;
+            a.play();
+            if (currentEntryIndex >= 0) {
+                const nb = currentNb();
+                highlightEntry(arrayIndex - 1, currentEntryIndex);
             }
-            cancelAnimationFrame(wordHighlightTimer);
-            tick();
-        }
+        }, PAUSE_MS);
+    } else {
+        viewStatus.innerText = 'LISTEN DONE ✓';
+        isPlaying = false;
+        playChime();
+    }
+}
 
-        function stopWordTracking() {
-            cancelAnimationFrame(wordHighlightTimer);
-            clearHighlight();
-        }
+function playChime() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = ctx.currentTime;
+        function tone(f, t, d, g) { const o=ctx.createOscillator(), gn=ctx.createGain(); o.type='sine'; o.frequency.value=f; gn.gain.setValueAtTime(g,t); gn.gain.exponentialRampToValueAtTime(0.01,t+d); o.connect(gn); gn.connect(ctx.destination); o.start(t); o.stop(t+d); }
+        tone(880, now, 0.15, 0.3); tone(1100, now+0.18, 0.25, 0.3);
+        setTimeout(() => ctx.close(), 1000);
+    } catch(e) {}
+}
 
-        function startAudioSequence(audioUrlFemale, englishText, recordId, segIdx) {
-            stopAudio();
-            // segIdx 指定了正在播放的段落
-            currentSegIndex = (segIdx != null) ? segIdx : -1;
-            segmentWordCount = englishText.trim().split(/\s+/).length;
-            // wordOffset 使用该段在全文中的起始位置
-            wordOffset = (currentSegIndex >= 0 && segWordStarts[currentSegIndex] != null)
-                ? segWordStarts[currentSegIndex]
-                : Math.max(0, wordSpans.length - segmentWordCount);
+function stopAudio() {
+    [audioFemale, audioMale].forEach(a => { if (!a) return; a.pause(); a.currentTime = 0; a.removeEventListener('ended', onAudioEnded); });
+    audioFemale = null; audioMale = null; isPlaying = false; repeatCount = 0;
+    clearEntryHighlight();
+}
 
-            highlightSeg(currentSegIndex);
-
-            audioFemale = new Audio(audioUrlFemale);
-            audioFemale.addEventListener('ended', onAudioEnded);
-            audioFemale.addEventListener('play', startWordTracking);
-
-            const maleUrl = '/api/audio/' + recordId + '/male';
-            audioMale = new Audio(maleUrl);
-            audioMale.addEventListener('ended', onAudioEnded);
-            audioMale.addEventListener('play', startWordTracking);
-            audioMale.load();
-
-            repeatCount = 0;
-            isPlaying = true;
-            const segLabel = currentSegIndex >= 0 ? ' SEG' + (currentSegIndex + 1) : '';
-            viewStatus.innerText = 'PLAYING [1/3] ♀' + segLabel;
-            audioFemale.play();
-        }
-
-        function playSegment(segIdx) {
-            const card = currentCard();
-            if (!card || segIdx < 0 || segIdx >= card.texts.length) return;
-            const eng = card.texts[segIdx];
-            const rid = (card.rids && card.rids[segIdx]) ? card.rids[segIdx] : null;
-            if (!rid) return;
-            startAudioSequence('/api/audio/' + rid, eng, rid, segIdx);
-        }
-
-        function playCurrentCardLast() {
-            const card = currentCard();
-            if (!card || card.texts.length === 0) return;
-            playSegment(card.texts.length - 1);
-        }
-
-        function onAudioEnded() {
-            stopWordTracking();
-            repeatCount++;
-            if (repeatCount < repeatTarget) {
-                const voice = VOICE_LABELS[repeatCount + 1];
-                viewStatus.innerText = 'PAUSE [' + (repeatCount + 1) + '/3]';
-                setTimeout(() => {
-                    if (!isPlaying) return;
-                    const a = getCurrentAudio();
-                    if (!a) return;
-                    a.currentTime = 0;
-                    viewStatus.innerText = 'PLAYING [' + (repeatCount + 1) + '/3] ' + voice;
-                    a.play();
-                }, PAUSE_MS);
-            } else {
-                viewStatus.innerText = 'LISTEN DONE ✓';
-                isPlaying = false;
-                playChime();
-            }
-        }
-
-        function playChime() {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                function tone(freq, start, duration, gain) {
-                    const osc = ctx.createOscillator();
-                    const g = ctx.createGain();
-                    osc.type = 'sine';
-                    osc.frequency.value = freq;
-                    g.gain.setValueAtTime(gain, start);
-                    g.gain.exponentialRampToValueAtTime(0.01, start + duration);
-                    osc.connect(g);
-                    g.connect(ctx.destination);
-                    osc.start(start);
-                    osc.stop(start + duration);
-                }
-                const now = ctx.currentTime;
-                tone(880, now, 0.15, 0.3);
-                tone(1100, now + 0.18, 0.25, 0.3);
-                setTimeout(() => ctx.close(), 1000);
-            } catch(e) { /* Web Audio 不可用时静默忽略 */ }
-        }
-
-        function stopAudio() {
-            [audioFemale, audioMale].forEach(a => {
-                if (!a) return;
-                a.pause();
-                a.currentTime = 0;
-                a.removeEventListener('ended', onAudioEnded);
-                a.removeEventListener('play', startWordTracking);
-            });
-            audioFemale = null;
-            audioMale = null;
-            isPlaying = false;
-            repeatCount = 0;
-            stopWordTracking();
-            viewStatus.innerText = 'STOPPED';
-        }
-
-        // 点击显示区：检测点击的段落，播放该段；若无指定段落则播放最后一段
-        document.getElementById('display-zone').onclick = (e) => {
-            // 向上查找最近的 .cl-seg 容器
-            let target = e.target;
-            let segEl = null;
-            while (target && target !== segmentsArea) {
-                if (target.classList && target.classList.contains('cl-seg')) {
-                    segEl = target;
-                    break;
-                }
-                target = target.parentElement;
-            }
-
-            if (segEl) {
-                const segIdx = parseInt(segEl.getAttribute('data-seg-index'), 10);
-                if (!isNaN(segIdx) && segIdx >= 0) {
-                    // 如果正在播同一段 → 暂停/恢复
-                    if (isPlaying && currentSegIndex === segIdx) {
-                        const a = getCurrentAudio();
-                        if (a) {
-                            a.pause();
-                            isPlaying = false;
-                            stopWordTracking();
-                            viewStatus.innerText = 'PAUSED';
-                            return;
-                        }
-                    }
-                    // 播放被点击的段落
-                    playSegment(segIdx);
-                    return;
-                }
-            }
-
-            // 点击了段落之外（空白区）：若无正在播放的音频则播最后一段
+// Card click → play entry
+document.getElementById('card-stack').addEventListener('click', (e) => {
+    const entryEl = e.target.closest('.entry-line');
+    if (!entryEl) return;
+    const entryIdx = parseInt(entryEl.getAttribute('data-entry-index'), 10);
+    if (!isNaN(entryIdx) && entryIdx >= 0) {
+        if (isPlaying && currentEntryIndex === entryIdx) {
             const a = getCurrentAudio();
-            if (!a) {
-                playCurrentCardLast();
-                return;
-            }
-            if (isPlaying) {
-                a.pause();
-                isPlaying = false;
-                stopWordTracking();
-                viewStatus.innerText = 'PAUSED';
-            } else {
-                const voice = VOICE_LABELS[repeatCount + 1];
-                viewStatus.innerText = 'PLAYING [' + (repeatCount + 1) + '/3] ' + voice;
-                isPlaying = true;
-                startWordTracking();
-                a.play();
-            }
-        };
-
-        // ═══════════════════════════════════════════
-        // 4. 卡片切换动画 + 删除
-        // ═══════════════════════════════════════════
-        let animating = false;
-        const SEG_AREA = document.getElementById('segments-area');
-
-        // ── 翻页：出 → 切数据 → 入 ──
-        function slideTransition(direction, newIdx) {
-            if (animating) return;
-            stopAudio();
-            animating = true;
-
-            const outAnim = direction === 'next' ? 'slide-left-out' : 'slide-right-out';
-            const inAnim  = direction === 'next' ? 'slide-right-in'  : 'slide-left-in';
-
-            SEG_AREA.classList.add(outAnim);
-
-            // 动画过半时切数据
-            const swapTimer = setTimeout(() => {
-                currentCardIdx = newIdx;
-                persistCards();
-                refreshCardDisplay();
-                preloadCardAudio();
-            }, 180);
-
-            SEG_AREA.addEventListener('animationend', function onOutEnd() {
-                clearTimeout(swapTimer);
-                SEG_AREA.removeEventListener('animationend', onOutEnd);
-                SEG_AREA.classList.remove(outAnim);
-
-                // 立即播放滑入动画
-                SEG_AREA.classList.add(inAnim);
-                SEG_AREA.addEventListener('animationend', function onInEnd() {
-                    SEG_AREA.removeEventListener('animationend', onInEnd);
-                    SEG_AREA.classList.remove(inAnim);
-                    animating = false;
-                    updateCounterDisplay();
-                    viewStatus.innerText = 'CARD ' + String(currentCard().num || '?');
-                }, { once: true });
-            }, { once: true });
+            if (a) { a.pause(); isPlaying = false; clearEntryHighlight(); viewStatus.innerText = 'PAUSED'; }
+            return;
         }
+        playEntryInCurrentCard(entryIdx);
+    }
+});
 
-        // ── 删除：下滑出 → 切数据 ──
-        function deleteCurrentCard() {
-            const card = currentCard();
-            if (!card || card.texts.length === 0) {
-                viewStatus.innerText = 'NO CARD TO DELETE';
-                return;
-            }
-            if (animating) return;
-            stopAudio();
-            animating = true;
+// ═══════════════════════════════════════════
+// 5. Navigation
+// ═══════════════════════════════════════════
+const navInput = document.getElementById('current-index-input');
+const totalDisplay = document.getElementById('total-count-display');
+const readyIndicator = document.getElementById('ready-indicator');
 
-            const rids = [...(card.rids || [])];
-            const wasLast = cards.length === 1;
+function updateNav() {
+    navInput.value = arrayIndex === 0 ? '0' : String(arrayIndex);
+    totalDisplay.innerText = '/ ' + nbCardCount();
+    document.getElementById('btn-prev').disabled = arrayIndex <= 0;
+    document.getElementById('btn-next').disabled = arrayIndex >= nbCardCount();
+    readyIndicator.style.opacity = arrayIndex === 0 ? '1' : '0';
+    readyIndicator.style.pointerEvents = arrayIndex === 0 ? 'auto' : 'none';
+    const btnSel = document.getElementById('btn-selection-mode');
+    if (arrayIndex === 0) {
+        if (isSelectionMode) toggleSelectionMode();
+        btnSel.classList.add('btn-dimmed');
+    } else {
+        btnSel.classList.remove('btn-dimmed');
+    }
+}
 
-            SEG_AREA.classList.add('slide-down-out');
-            SEG_AREA.addEventListener('animationend', function onDelEnd() {
-                SEG_AREA.removeEventListener('animationend', onDelEnd);
-                SEG_AREA.classList.remove('slide-down-out');
+function switchCard(fromEl, toEl, outAnim, inAnim) {
+    if (!fromEl || !toEl) return;
+    fromEl.classList.add(outAnim);
+    toEl.style.display = 'flex';
+    toEl.classList.add(inAnim, 'active');
+    setTimeout(() => {
+        fromEl.classList.remove('active', outAnim);
+        fromEl.style.display = 'none';
+        toEl.classList.remove(inAnim);
+        updateNav();
+        if (arrayIndex > 0) preloadLastEntryAudio();
+    }, 500);
+}
 
-                rids.forEach(rid => {
-                    fetch('/api/recycle/' + rid, { method: 'DELETE' }).catch(() => {});
-                });
+function navigate(direction) {
+    const curId = 'card-' + (arrayIndex === 0 ? 0 : arrayIndex);
+    const curEl = document.getElementById(curId);
+    if (direction === 'next' && arrayIndex < nbCardCount()) {
+        arrayIndex++;
+        switchCard(curEl, document.getElementById('card-' + arrayIndex), 'slide-out-right', 'slide-in-left');
+    } else if (direction === 'prev' && arrayIndex > 0) {
+        arrayIndex--;
+        switchCard(curEl, document.getElementById('card-' + arrayIndex), 'slide-out-left', 'slide-in-right');
+    }
+    if (!currentNb()) return;
+    currentNb().currentCardIdx = arrayIndex;
+    saveNotebooks();
+}
 
-                if (wasLast) {
-                    cards = [{ num: 0, texts: [], chns: [], rids: [], created_at: Date.now() / 1000 }];
-                    currentCardIdx = 0;
-                } else {
-                    cards.splice(currentCardIdx, 1);
-                    cards.forEach((c, i) => c.num = i);
-                    if (currentCardIdx >= cards.length) currentCardIdx = Math.max(0, cards.length - 1);
-                }
-                persistCards();
-                refreshCardDisplay();
-                preloadCardAudio();
+document.getElementById('btn-next').addEventListener('click', () => navigate('next'));
+document.getElementById('btn-prev').addEventListener('click', () => navigate('prev'));
 
-                // 卡片无动画归位
-                SEG_AREA.classList.add('slide-right-in');
-                SEG_AREA.addEventListener('animationend', function onRestore() {
-                    SEG_AREA.removeEventListener('animationend', onRestore);
-                    SEG_AREA.classList.remove('slide-right-in');
-                    animating = false;
-                    updateCounterDisplay();
-                    fetchSqliteCount();
-                }, { once: true });
+navInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        let t = parseInt(navInput.value, 10);
+        if (!isNaN(t) && t >= 0 && t <= nbCardCount() && t !== arrayIndex) {
+            const cur = document.getElementById('card-' + (arrayIndex === 0 ? 0 : arrayIndex));
+            const target = document.getElementById('card-' + t);
+            const fwd = t > arrayIndex;
+            arrayIndex = t;
+            if (currentNb()) currentNb().currentCardIdx = arrayIndex;
+            saveNotebooks();
+            switchCard(cur, target, fwd ? 'slide-out-right' : 'slide-out-left', fwd ? 'slide-in-left' : 'slide-in-right');
+        } else { updateNav(); }
+    }
+});
 
-                viewStatus.innerText = '已删除。可以在电脑回收站找回。';
-            }, { once: true });
+function toggleSelectionMode() {
+    isSelectionMode = !isSelectionMode;
+    const stack = document.getElementById('card-stack');
+    const btn = document.getElementById('btn-selection-mode');
+    if (isSelectionMode) { stack.classList.add('selection-active'); btn.classList.add('text-secondary-fixed-dim', 'glow-cyan'); }
+    else { stack.classList.remove('selection-active'); btn.classList.remove('text-secondary-fixed-dim', 'glow-cyan'); }
+}
+document.getElementById('btn-selection-mode').addEventListener('click', toggleSelectionMode);
+
+function deleteCurrentCard() {
+    const nb = currentNb();
+    if (!nb.cards || nb.cards.length === 0) { showToast('没有卡片可删除'); return; }
+    if (arrayIndex === 0) return;
+    const cardIdx = arrayIndex - 1;
+    if (cardIdx >= nb.cards.length) return;
+    const cardEl = document.getElementById('card-' + arrayIndex);
+    if (!cardEl) return;
+    stopAudio();
+    cardEl.classList.add('delete-down');
+    const rids = (nb.cards[cardIdx].entries || []).map(e => e.rid).filter(Boolean);
+    setTimeout(() => {
+        rids.forEach(rid => { fetch('/api/recycle/' + rid, { method: 'DELETE' }).catch(() => {}); });
+        nb.cards.splice(cardIdx, 1);
+        if (arrayIndex > nb.cards.length) arrayIndex = nb.cards.length;
+        nb.currentCardIdx = arrayIndex;
+        saveNotebooks();
+        rebuildCardStack();
+        showToast('已删除。可以在电脑回收站找回。');
+    }, 600);
+}
+
+document.getElementById('btn-delete-card').addEventListener('click', deleteCurrentCard);
+
+// ═══════════════════════════════════════════
+// 6. Screenshot → OCR → Translate → TTS
+// ═══════════════════════════════════════════
+function submitScreenshot(dataUrl) {
+    viewStatus.innerText = 'CLIPPING...';
+    fetch(dataUrl).then(r => r.blob()).then(blob => {
+        const fd = new FormData();
+        fd.append('image', blob, 'screenshot.png');
+        fd.append('route', document.getElementById('course-route').value);
+        return fetch('/api/process', { method: 'POST', body: fd });
+    }).then(async res => {
+        if (res.status === 402) { triggerRechargeUI(); throw new Error('TOKEN_EXCEEDED'); }
+        if (res.status === 409) {
+            const d = await res.json();
+            if (d.tier === 'paid') triggerPaidUpgradeUI(d); else triggerFreeUpgradeUI(d);
+            throw new Error('CARD_LIMIT');
         }
-
-        // ── 导航（方案 A：长按快进） ──
-        const LONG_PRESS_DELAY = 500;    // 长按阈值 (ms)
-        const AUTO_ADVANCE_INTERVAL = 100; // 自动翻页间隔 (ms)
-        let longPressTimer = null;
-        let autoAdvanceTimer = null;
-        let longPressDirection = null;
-
-        function navPrev() {
-            if (currentCardIdx > 0) {
-                slideTransition('prev', currentCardIdx - 1);
-            } else {
-                viewStatus.innerText = '已是第一张';
-            }
+        if (!res.ok) {
+            try { const err = await res.json(); viewStatus.innerText = err.error || 'OCR 失败'; } catch(e) { viewStatus.innerText = 'OCR 失败 (HTTP ' + res.status + ')'; }
+            throw new Error('PROCESS_FAILED');
         }
-        function navNext() {
-            if (currentCardIdx < cards.length - 1) {
-                slideTransition('next', currentCardIdx + 1);
-            } else {
-                viewStatus.innerText = '已是最后一张';
-            }
-        }
+        const eng = decodeURIComponent(res.headers.get('X-English-Text') || '');
+        const chn = decodeURIComponent(res.headers.get('X-Chinese-Text') || '');
+        const rid = res.headers.get('X-Record-Id');
+        if (!eng || !rid) throw new Error('NO_TEXT');
+        appendTextToCurrentCard(eng, chn, rid);
+        const el = document.querySelector('.card-container');
+        if (el) { el.style.transform = 'scale(0.98)'; setTimeout(() => el.style.transform = 'scale(1)', 150); }
+        return res.blob().then(blob => ({ blob, rid }));
+    }).then(({ blob, rid }) => {
+        const audioUrl = URL.createObjectURL(blob);
+        const nb = currentNb();
+        const cardIdx = nb.cards.length - 1;
+        const entryIdx = (nb.cards[cardIdx].entries || []).length - 1;
+        startAudioSequence(audioUrl, rid, cardIdx, entryIdx);
+    }).catch(err => {
+        if (['TOKEN_EXCEEDED','CARD_LIMIT','CARD_LIMIT_FREE','PROCESS_FAILED'].includes(err.message)) return;
+        viewStatus.innerText = 'SERVICE UNAVAILABLE';
+    });
+}
 
-        function updateNavBoundary() {
-            const btnP = document.getElementById('btn-prev');
-            const btnN = document.getElementById('btn-next');
-            if (currentCardIdx <= 0) {
-                btnP.classList.add('disabled');
-            } else {
-                btnP.classList.remove('disabled');
-            }
-            if (currentCardIdx >= cards.length - 1) {
-                btnN.classList.add('disabled');
-            } else {
-                btnN.classList.remove('disabled');
-            }
-        }
+function triggerFreeUpgradeUI(data) {
+    stopAudio();
+    document.getElementById('card-stack').innerHTML = '<div style="text-align:center;padding:50px 28px;color:#e5e2e1;"><div style="width:70px;height:70px;border:4px solid #116cc7;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;"><span style="color:#116cc7;font-size:28px;font-weight:700;">100</span></div><p style="font-size:15px;margin-bottom:8px;font-weight:700;">免费版已达上限</p><p style="font-size:13px;color:#888;margin-bottom:20px;">' + (data.message||'请升级到网络版') + '</p><a href="'+(data.url||'https://www.cliplearn.ai')+'" target="_blank" style="background:#116cc7;color:#FFF;padding:10px 24px;border-radius:20px;text-decoration:none;font-weight:700;">前往 ClipLearn 网络版</a><p style="font-size:11px;color:#555;margin-top:12px;">1000 张卡片 · 多设备同步 · 云端备份</p></div>';
+    viewStatus.innerText = 'UPGRADE';
+}
 
-        // 方案 A：长按连续快进
-        function setupLongPress(btn, direction) {
-            btn.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                if (animating) return;
-                // 先执行一次单击翻页
-                if (direction === 'prev') navPrev(); else navNext();
-                // 启动长按定时器
-                longPressDirection = direction;
-                longPressTimer = setTimeout(() => {
-                    // 长按触发，开始自动快进
-                    btn.classList.add('long-pressing');
-                    autoAdvanceTimer = setInterval(() => {
-                        if (animating) return;
-                        if (direction === 'prev') {
-                            if (currentCardIdx > 0) slideTransition('prev', currentCardIdx - 1);
-                            else { stopAutoAdvance(); updateNavBoundary(); }
-                        } else {
-                            if (currentCardIdx < cards.length - 1) slideTransition('next', currentCardIdx + 1);
-                            else { stopAutoAdvance(); updateNavBoundary(); }
-                        }
-                    }, AUTO_ADVANCE_INTERVAL);
-                }, LONG_PRESS_DELAY);
-            });
+function triggerPaidUpgradeUI(data) {
+    stopAudio();
+    document.getElementById('card-stack').innerHTML = '<div style="text-align:center;padding:50px 28px;color:#e5e2e1;"><div style="width:70px;height:70px;border:4px solid #e5a100;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;"><span style="color:#e5a100;font-size:28px;font-weight:700;">200</span></div><p style="font-size:15px;margin-bottom:8px;font-weight:700;">离线版已达上限</p><p style="font-size:13px;color:#888;margin-bottom:20px;">' + (data.message||'请升级至付费版以解锁更多容量') + '</p><a href="'+(data.url||'https://www.cliplearn.ai/pricing')+'" target="_blank" style="background:#e5a100;color:#FFF;padding:10px 24px;border-radius:20px;text-decoration:none;font-weight:700;">升级至付费版</a><p style="font-size:11px;color:#555;margin-top:12px;">无限卡片 · 多设备同步 · 云端备份</p></div>';
+    viewStatus.innerText = 'UPGRADE';
+}
 
-            btn.addEventListener('mouseup', () => stopAutoAdvance());
-            btn.addEventListener('mouseleave', () => stopAutoAdvance());
-        }
+function triggerRechargeUI() {
+    stopAudio();
+    document.getElementById('card-stack').innerHTML = '<div style="text-align:center;padding:40px 24px;color:#e5e2e1;"><div style="width:70px;height:70px;border:4px solid #116cc7;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;animation:pulse 2s infinite;"><span style="color:#116cc7;font-size:24px;font-weight:700;">智</span></div><p style="font-size:15px;margin-bottom:6px;font-weight:700;">一星期无感缓冲期已满</p><p style="font-size:13px;color:#666;line-height:1.5;">系统已为您在本地提纯大量语言资产，现在需要补充能量。</p><button id="btn-recharge" style="background:#116cc7;border:none;color:#FFF;padding:10px 20px;border-radius:20px;font-weight:700;cursor:pointer;margin-top:15px;width:100%;">激活 (续期)</button></div>';
+    document.getElementById('btn-recharge').onclick = () => {
+        fetch('/api/recharge', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({amount:5000}) })
+            .then(r => r.json()).then(d => { if(d.status==='ok') location.reload(); });
+    };
+}
 
-        function stopAutoAdvance() {
-            if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
-            if (autoAdvanceTimer) { clearInterval(autoAdvanceTimer); autoAdvanceTimer = null; }
-            const btnP = document.getElementById('btn-prev');
-            const btnN = document.getElementById('btn-next');
-            btnP.classList.remove('long-pressing');
-            btnN.classList.remove('long-pressing');
-            longPressDirection = null;
-        }
+// ═══════════════════════════════════════════
+// 7. Settings Panel
+// ═══════════════════════════════════════════
+const settingsPanel = document.getElementById('settings-panel');
+const btnSettings = document.getElementById('btn-settings');
+const btnSettingsClose = document.getElementById('btn-settings-close');
 
-        setupLongPress(document.getElementById('btn-prev'), 'prev');
-        setupLongPress(document.getElementById('btn-next'), 'next');
+function openSettings() {
+    settingsPanel.classList.add('open');
+    document.getElementById('rename-input').placeholder = '当前：' + nbLabel(activeNotebook);
+}
+function closeSettings() { settingsPanel.classList.remove('open'); }
+btnSettings.addEventListener('click', openSettings);
+btnSettingsClose.addEventListener('click', closeSettings);
 
-        // ═══════════════════════════════════════════
-        // 5. 底部工具栏事件
-        // ═══════════════════════════════════════════
+document.getElementById('btn-login').addEventListener('click', function() {
+    const active = this.classList.toggle('logged-in');
+    this.textContent = active ? '已登录 ✓' : '登录 / 注册';
+    this.style.color = active ? '#4ade80' : '';
+});
 
-        // ── ⚙️ 设置：唤出/隐藏设置面板 ──
-        let settingsVisible = false;
-        document.getElementById('btn-settings').onclick = () => {
-            settingsVisible = !settingsVisible;
-            const panel = document.getElementById('cl-settings-panel');
-            panel.style.display = settingsVisible ? 'block' : 'none';
-        };
+document.getElementById('btn-rename').addEventListener('click', () => {
+    const n = document.getElementById('rename-input').value.trim();
+    if (!n) return;
+    nbCustomNames[activeNotebook] = n;
+    saveNbNames();
+    hubTitle.textContent = n;
+    const mi = hubDropdownMenu.querySelector('.dropdown-item[data-nb="' + activeNotebook + '"]');
+    if (mi) mi.textContent = n;
+    updateSearchPlaceholder();
+    showToast('笔记已更名为：' + n);
+    document.getElementById('rename-input').value = '';
+    closeSettings();
+});
 
-        // ── 🗑 删除：单击删除当前卡片，长按一键清理失效缓存 ──
-        const btnCleanup = document.getElementById('btn-cleanup');
-        let cleanupLongTimer = null;
-        let cleanupLongTriggered = false;
+document.querySelectorAll('.settings-panel input[name="theme"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        document.documentElement.className = this.value === 'dark' ? 'dark' : '';
+        localStorage.setItem('cl-theme', this.value);
+    });
+});
 
-        btnCleanup.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            if (animating) return;
-            cleanupLongTriggered = false;
-            cleanupLongTimer = setTimeout(() => {
-                cleanupLongTriggered = true;
-                stopAudio();
-                viewStatus.innerText = '清理中…';
-                fetch('/api/cleanup', { method: 'POST' })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.status === 'ok') {
-                            const total = (data.removed_active || 0) + (data.removed_trash || 0);
-                            if (total > 0) {
-                                viewStatus.innerText = '已清理 ' + total + ' 条失效记录';
-                                reloadCardsFromServer();
-                            } else {
-                                viewStatus.innerText = '没有需要清理的失效卡';
-                            }
-                        } else {
-                            viewStatus.innerText = '清理失败';
-                        }
-                    })
-                    .catch(() => { viewStatus.innerText = '清理失败'; });
-            }, LONG_PRESS_DELAY);
-        });
+(function initTheme() {
+    const saved = localStorage.getItem('cl-theme') || 'dark';
+    document.documentElement.className = saved === 'dark' ? 'dark' : '';
+    const radio = document.querySelector('.settings-panel input[name="theme"][value="' + saved + '"]');
+    if (radio) radio.checked = true;
+})();
 
-        btnCleanup.addEventListener('mouseup', () => {
-            if (cleanupLongTimer) { clearTimeout(cleanupLongTimer); cleanupLongTimer = null; }
-            if (!cleanupLongTriggered) {
-                // 短按：删除当前卡片
-                deleteCurrentCard();
-            }
-        });
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.innerText = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
 
-        btnCleanup.addEventListener('mouseleave', () => {
-            if (cleanupLongTimer) { clearTimeout(cleanupLongTimer); cleanupLongTimer = null; }
-            cleanupLongTriggered = false;
-        });
-
-        // 设置面板中的删除按钮（删除当前卡片）
-        document.getElementById('btn-delete-card').onclick = function() {
-            deleteCurrentCard();
-        };
-
-        // ── 卡片计数器 & 跳转 ──
-        let sqliteTotal = 0;
-
-        async function fetchSqliteCount() {
-            try {
-                const res = await fetch('/api/count');
-                const data = await res.json();
-                sqliteTotal = data.count || 0;
-                updateCounterDisplay();
-            } catch(e) {
-                sqliteTotal = cards.length;
-                updateCounterDisplay();
-            }
-        }
-
-        function updateCounterDisplay() {
-            const counter = document.getElementById('nav-counter');
-            const idx = cards.length > 0 ? currentCardIdx + 1 : 0;
-            counter.textContent = idx + ' / ' + sqliteTotal;
-            updateNavBoundary();
-        }
-
-        async function reloadCardsFromServer() {
-            try {
-                const res = await fetch('/api/records');
-                const records = await res.json();
-                // 用服务端数据重建 cards 数组
-                if (records.length > 0) {
-                    cards = records.map((r, i) => ({
-                        num: i,
-                        texts: r.english ? [r.english] : [],
-                        chns: r.chinese ? [r.chinese] : [],
-                        rids: [r.id],
-                        created_at: r.created_at || (Date.now() / 1000)
-                    }));
-                } else {
-                    cards = [{ num: 0, texts: [], chns: [], rids: [], created_at: Date.now() / 1000 }];
-                }
-                currentCardIdx = 0;
-                persistCards();
-                refreshCardDisplay();
-                preloadCardAudio();
-                sqliteTotal = records.length;
-                updateCounterDisplay();
-            } catch(e) {
-                // 网络错误时保持本地数据
-                sqliteTotal = cards.length;
-                updateCounterDisplay();
-            }
-        }
-
-        // 方案 C：点击计数器 → 输入跳转
-        const navCounter = document.getElementById('nav-counter');
-        const navJumpInput = document.getElementById('nav-jump-input');
-
-        navCounter.onclick = () => {
-            // 显示输入框，隐藏文本
-            navCounter.style.display = 'none';
-            navJumpInput.style.display = 'inline-block';
-            navJumpInput.max = sqliteTotal;
-            navJumpInput.value = currentCardIdx + 1;
-            navJumpInput.focus();
-            navJumpInput.select();
-        };
-
-        navJumpInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const target = parseInt(navJumpInput.value, 10);
-                if (target >= 1 && target <= cards.length) {
-                    slideTransition(target > currentCardIdx + 1 ? 'next' : 'prev', target - 1);
-                }
-                hideJumpInput();
-            } else if (e.key === 'Escape') {
-                hideJumpInput();
-            }
-        });
-
-        navJumpInput.addEventListener('blur', () => {
-            hideJumpInput();
-        });
-
-        function hideJumpInput() {
-            navJumpInput.style.display = 'none';
-            navCounter.style.display = '';
-        }
-        // ═══════════════════════════════════════════
-        if (isElectron) {
-            window.electronAPI.onScreenshotCaptured((dataUrl) => {
-                submitScreenshot(dataUrl);
-            });
-        }
-
-        // 统计所有卡片的截图总数
-        function totalRidsCount() {
-            return cards.reduce((sum, c) => sum + (c.rids ? c.rids.length : 0), 0);
-        }
-
-        function triggerFreeUpgradeUI(data) {
-            stopAudio();
-            const cardEl = document.getElementById('cl-card');
-            cardEl.innerHTML =
-                '<div class="cl-main-body" style="text-align:center;padding:50px 28px;">' +
-                '<div style="width:70px;height:70px;border:4px solid #116cc7;border-radius:50%;margin:0 auto 20px auto;display:flex;align-items:center;justify-content:center;">' +
-                '<span style="color:#116cc7;font-size:28px;font-weight:bold;">100</span></div>' +
-                '<p style="font-size:15px;color:#FFF;margin-bottom:8px;font-weight:bold;">免费版已达上限</p>' +
-                '<p style="font-size:13px;color:#888;line-height:1.6;margin-bottom:20px;">' + (data.message || '请升级到网络版') + '</p>' +
-                '<a href="' + (data.url || 'https://www.cliplearn.ai') + '" target="_blank" style="display:inline-block;background-color:#116cc7;color:#FFF;padding:10px 24px;border-radius:20px;text-decoration:none;font-weight:bold;margin-bottom:12px;">前往 ClipLearn 网络版</a>' +
-                '<p style="font-size:11px;color:#555;">支持 1000 张卡片 · 多设备同步 · 云端备份</p>' +
-                '</div>';
-            viewStatus.innerText = 'UPGRADE';
-        }
-
-        // 付费版升级提示 (200张卡片)
-        function triggerPaidUpgradeUI(data) {
-            stopAudio();
-            const cardEl = document.getElementById('cl-card');
-            cardEl.innerHTML =
-                '<div class="cl-main-body" style="text-align:center;padding:50px 28px;">' +
-                '<div style="width:70px;height:70px;border:4px solid #e5a100;border-radius:50%;margin:0 auto 20px auto;display:flex;align-items:center;justify-content:center;">' +
-                '<span style="color:#e5a100;font-size:28px;font-weight:bold;">200</span></div>' +
-                '<p style="font-size:15px;color:#FFF;margin-bottom:8px;font-weight:bold;">离线版已达上限</p>' +
-                '<p style="font-size:13px;color:#888;line-height:1.6;margin-bottom:20px;">' + (data.message || '请升级至付费版以解锁更多容量') + '</p>' +
-                '<a href="' + (data.url || 'https://www.cliplearn.ai/pricing') + '" target="_blank" style="display:inline-block;background-color:#e5a100;color:#FFF;padding:10px 24px;border-radius:20px;text-decoration:none;font-weight:bold;margin-bottom:12px;">升级至付费版</a>' +
-                '<p style="font-size:11px;color:#555;">无限卡片 · 多设备同步 · 云端备份 · 优先支持</p>' +
-                '</div>';
-            viewStatus.innerText = 'UPGRADE';
-        }
-        // 将 dataUrl 转 Blob 发送给后端
-        function submitScreenshot(dataUrl) {
-            viewStatus.innerText = 'CLIPPING...';
-            fetch(dataUrl)
-                .then(res => res.blob())
-                .then(blob => {
-                    const formData = new FormData();
-                    formData.append('image', blob, 'screenshot.png');
-                    formData.append('route', document.getElementById('course-route').value);
-                    return fetch('/api/process', { method: 'POST', body: formData });
-                })
-                .then(async res => {
-                    if (res.status === 402) { triggerRechargeUI(); throw new Error('TOKEN_EXCEEDED'); }
-                    if (res.status === 409) {
-                        const data = await res.json();
-                        if (data.tier === 'paid') {
-                            triggerPaidUpgradeUI(data);
-                            throw new Error('CARD_LIMIT');
-                        } else {
-                            triggerFreeUpgradeUI(data);
-                            throw new Error('CARD_LIMIT_FREE');
-                        }
-                    }
-                    if (!res.ok) {
-                        // 后端返回错误 (400/500): 读取 JSON 显示具体原因
-                        try {
-                            const errData = await res.json();
-                            viewStatus.innerText = (errData.error || 'OCR 失败');
-                        } catch(e) {
-                            viewStatus.innerText = 'OCR 失败 (HTTP ' + res.status + ')';
-                        }
-                        throw new Error('PROCESS_FAILED');
-                    }
-                    const eng = decodeURIComponent(res.headers.get('X-English-Text') || '');
-                    const chn = decodeURIComponent(res.headers.get('X-Chinese-Text') || '');
-                    const rid = res.headers.get('X-Record-Id');
-                    if (!eng || !rid) throw new Error('NO_TEXT');
-
-                    appendTextToCard(eng, chn, rid);
-
-                    const cardEl = document.getElementById('cl-card');
-                    cardEl.style.transform = 'scale(0.98)';
-                    setTimeout(() => cardEl.style.transform = 'scale(1)', 150);
-
-                    return res.blob().then(blob => ({ blob, eng, rid }));
-                })
-                .then(({ blob, eng, rid }) => {
-                    const audioUrl = URL.createObjectURL(blob);
-                    upsertRecord({
-                        id: rid,
-                        english: cardCombinedText(currentCard()),
-                        chinese: cardCombinedChinese(currentCard()),
-                        created_at: currentCard().created_at
-                    });
-                    const segIdx = currentCard().texts.length - 1;
-                    startAudioSequence(audioUrl, eng, rid, segIdx);
-                })
-                .catch(err => {
-                    if (err.message === 'TOKEN_EXCEEDED' || err.message === 'CARD_LIMIT' || err.message === 'CARD_LIMIT_FREE' || err.message === 'PROCESS_FAILED') return;
-                    viewStatus.innerText = 'SERVICE UNAVAILABLE';
-                    console.error(err);
-                });
-        }
-
-        // ═══════════════════════════════════════════
-        // 6. 充值 UI
-        // ═══════════════════════════════════════════
-        function triggerRechargeUI() {
-            stopAudio();
-            document.getElementById('cl-card').innerHTML =
-                '<div class="cl-main-body" style="text-align: center; padding: 40px 24px;">' +
-                '<div style="width: 70px; height: 70px; border: 4px solid #116cc7; border-radius: 50%; margin: 0 auto 20px auto; display: flex; align-items: center; justify-content: center; animation: pulse 2s infinite;">' +
-                '<span style="color: #116cc7; font-size: 24px; font-weight: bold;">智</span></div>' +
-                '<p class="recharge-title" style="font-size: 15px; margin-bottom: 6px; font-weight: bold;">一星期无感缓冲期已满</p>' +
-                '<p style="font-size: 13px; color: #666; margin-top: 0; line-height: 1.5;">系统已为您在本地成功提纯并沉淀了大量语言核心资产，现在需要补充能量。</p>' +
-                '<button id="btn-recharge" style="background-color: #116cc7; border: none; color: white; padding: 10px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; margin-top: 15px; width: 100%;">激活 1000 条纯正美音 Ruth (续期)</button></div>';
-            document.getElementById('btn-recharge').onclick = () => {
-                fetch('/api/recharge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: 5000 }) })
-                    .then(res => res.json()).then(data => { if (data.status === 'ok') location.reload(); })
-                    .catch(err => console.error('Recharge error:', err));
-            };
-        }
-
-        // ═══════════════════════════════════════════
-        // 7. 颜色主题切换
-        // ═══════════════════════════════════════════
-
-        // 启动卡片系统
-        initCards();
-
-        (function() {
-            const themeRadios = document.querySelectorAll('input[name="theme"]');
-            const body = document.body;
-            const saved = localStorage.getItem('cl-theme') || 'dark';
-            body.className = saved === 'dark' ? '' : 'theme-' + saved;
-            const checkedRadio = document.querySelector('input[name="theme"][value="' + saved + '"]');
-            if (checkedRadio) checkedRadio.checked = true;
-            themeRadios.forEach(radio => {
-                radio.addEventListener('change', function() {
-                    const val = this.value;
-                    body.className = val === 'dark' ? '' : 'theme-' + val;
-                    localStorage.setItem('cl-theme', val);
-                });
-            });
-        })();
-    </script>
+// ═══════════════════════════════════════════
+// 8. Init
+// ═══════════════════════════════════════════
+loadAll();
+hubDropdownMenu.querySelectorAll('.dropdown-item').forEach(item => {
+    item.textContent = nbLabel(item.getAttribute('data-nb'));
+});
+hubTitle.textContent = nbLabel(activeNotebook);
+updateSearchPlaceholder();
+rebuildCardStack();
+if (isElectron) {
+    window.electronAPI.onScreenshotCaptured((dataUrl) => { submitScreenshot(dataUrl); });
+}
+</script>
 </body>
 </html>

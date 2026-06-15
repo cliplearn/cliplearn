@@ -131,22 +131,36 @@ function createMiniWindow() {
 }
 
 // ─── 4. 创建卡片主窗口 ───
+// 14" 屏物理尺寸 302×189mm
+const SCREEN_WIDTH_MM = 302;
+const SCREEN_HEIGHT_MM = 189;
+const CL_WIDTH_MM = 121;              // CL 窗口宽度
+const CL_LEFT_FROM_RIGHT_MM = 181;   // 左缘离右屏边缘距离
+const CL_Y_OFFSET_MM = 0.5;          // 整体下移量
+const CL_TITLEBAR_MM = 8;            // 标题栏高度
+
 function getWindowSize() {
-    const { width: screenW, height: screenH } = screen.getPrimaryDisplay().workAreaSize;
-    const windowWidth = Math.floor(screenW * 0.35);
-    const windowHeight = screenH;
-    return { windowWidth, windowHeight, screenW, screenH };
+    const { width: screenW, height: screenH } = screen.getPrimaryDisplay().workArea;
+    const pxPerMmW = screenW / SCREEN_WIDTH_MM;
+    const pxPerMmH = screenH / SCREEN_HEIGHT_MM;
+    const windowWidth = Math.round(CL_WIDTH_MM * pxPerMmW);
+    const windowHeight = screenH;   // 高度不变
+    const windowX = screenW - windowWidth;   // 右缘贴屏幕
+    const windowY = Math.round(CL_Y_OFFSET_MM * pxPerMmH);
+    const titlebarHeight = Math.round(CL_TITLEBAR_MM * pxPerMmH);
+    return { windowWidth, windowHeight, windowX, windowY, screenW, screenH, titlebarHeight };
 }
 
 function createMainWindow() {
-    const { windowWidth, windowHeight, screenW, screenH } = getWindowSize();
+    const { windowWidth, windowHeight, windowX, windowY, titlebarHeight } = getWindowSize();
 
     mainWindow = new BrowserWindow({
         width: windowWidth,
         height: windowHeight,
-        x: screenW - windowWidth,
-        y: 0,
-        frame: true,
+        x: windowX,
+        y: windowY,
+        frame: false,
+        hasShadow: true,
         transparent: false,
         resizable: true,
         skipTaskbar: false,
@@ -175,20 +189,20 @@ function createMainWindow() {
         setTimeout(() => {
             if (mainWindow && !mainWindow.isDestroyed()) {
                 console.log('[Main] 重试加载页面...');
-                mainWindow.loadURL(FLASK_URL);
+                mainWindow.loadURL(`${FLASK_URL}?titlebar_h=${titlebarHeight}`);
             }
         }, 2000);
     });
 
-    // 屏幕分辨率变化时自动调整窗口位置与大小 (右侧 1/3 屏)
+    // 屏幕分辨率变化时按物理比例重新定位
     const repositionWindow = () => {
         if (!mainWindow || mainWindow.isDestroyed()) return;
         const sz = getWindowSize();
         const bounds = mainWindow.getBounds();
         const newW = sz.windowWidth;
         const newH = sz.windowHeight;
-        const newX = sz.screenW - newW;
-        const newY = 0;
+        const newX = sz.windowX;
+        const newY = sz.windowY;
         if (bounds.x !== newX || bounds.y !== newY || bounds.width !== newW || bounds.height !== newH) {
             mainWindow.setBounds({ x: newX, y: newY, width: newW, height: newH });
         }
@@ -196,7 +210,7 @@ function createMainWindow() {
     screen.on('display-metrics-changed', repositionWindow);
     mainWindow.on('resize', repositionWindow);
 
-    mainWindow.loadURL(FLASK_URL);
+    mainWindow.loadURL(`${FLASK_URL}?titlebar_h=${titlebarHeight}`);
 
     mainWindow.on('close', (e) => {
         if (app.isQuitting) {
@@ -233,11 +247,9 @@ function restoreMainWindow() {
         mainWindow.restore();
     }
 
-    // 面板定位到屏幕右侧（右侧 1/3 屏）
-    const { windowWidth, windowHeight, screenW } = getWindowSize();
-    const x = screenW - windowWidth;
-    const y = 0;
-    mainWindow.setBounds({ x, y, width: windowWidth, height: windowHeight });
+    // 面板定位：右缘贴屏幕，宽 121mm，下移 0.5mm，标题栏 8mm
+    const { windowWidth, windowHeight, windowX, windowY } = getWindowSize();
+    mainWindow.setBounds({ x: windowX, y: windowY, width: windowWidth, height: windowHeight });
 
     mainWindow.show();
     mainWindow.focus();
