@@ -590,8 +590,9 @@ def register_routes(app):
             response.headers["X-Chinese-Text"] = urllib.parse.quote(chinese_text)
             response.headers["X-Record-Id"] = record_id
             response.headers["X-Has-Male-Audio"] = "1" if male_audio_path else "0"
+            response.headers["X-Token-Remaining"] = str(status["token_remaining"])
             response.headers["Access-Control-Expose-Headers"] = \
-                "X-English-Text, X-Chinese-Text, X-Record-Id, X-Has-Male-Audio"
+                "X-English-Text, X-Chinese-Text, X-Record-Id, X-Has-Male-Audio, X-Token-Remaining"
             return response
         except Exception as e:
             return jsonify({"error": str(e)}), 500

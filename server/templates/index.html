@@ -268,6 +268,13 @@
                 <button id="btn-login" class="settings-action-btn login-btn">登录 / 注册</button>
             </div>
             <hr class="settings-divider"/>
+            <!-- Token 状态 -->
+            <div class="settings-row">
+                <span class="settings-label">Token 剩余</span>
+                <span class="font-label-md text-[12px] text-secondary-fixed-dim" id="token-remaining">--</span>
+            </div>
+            <hr class="settings-divider"/>
+            <!-- 笔记更名 -->
             <div class="settings-row">
                 <span class="settings-label">笔记更名</span>
                 <div class="flex items-center gap-2">
@@ -345,6 +352,63 @@
 
 <script>
 // ═══════════════════════════════════════════
+// 0.5. User State (free 10/notebook → register → 20/notebook → pay)
+// ═══════════════════════════════════════════
+const USER_KEY = 'cliplearn_user';
+const FREE_LIMIT = 10;
+const REGISTERED_LIMIT = 1000;
+
+let userState = { tier: 'free', registered: false };
+
+function loadUser() {
+    try {
+        const raw = localStorage.getItem(USER_KEY);
+        if (raw) userState = JSON.parse(raw);
+    } catch(e) { userState = { tier: 'free', registered: false }; }
+}
+
+function saveUser() {
+    try { localStorage.setItem(USER_KEY, JSON.stringify(userState)); } catch(e) {}
+}
+
+function notebookCardCount(nbKey) {
+    const nb = notebooks[nbKey];
+    return (nb && nb.cards) ? nb.cards.length : 0;
+}
+
+function checkNotebookLimit(nbKey) {
+    // Paid: unlimited
+    if (userState.tier === 'paid') return true;
+    const count = notebookCardCount(nbKey);
+    const limit = userState.tier === 'registered' ? REGISTERED_LIMIT : FREE_LIMIT;
+    return count < limit;
+}
+
+function getCurrentLimit() {
+    return userState.tier === 'registered' ? REGISTERED_LIMIT : FREE_LIMIT;
+}
+
+let tokenRemaining = 5000;  // 从后端同步
+
+async function fetchTokenStatus() {
+    try {
+        const resp = await fetch('/api/status_full');
+        if (resp.ok) {
+            const data = await resp.json();
+            tokenRemaining = data.token_remaining || 0;
+            updateTokenDisplay();
+            return tokenRemaining;
+        }
+    } catch(e) {}
+    return tokenRemaining;
+}
+
+function updateTokenDisplay() {
+    const el = document.getElementById('token-remaining');
+    if (el) el.textContent = tokenRemaining;
+}
+
+// ═══════════════════════════════════════════
 // 0. Electron / Browser detection
 // ═══════════════════════════════════════════
 const isElectron = !!(window.electronAPI);
@@ -374,7 +438,6 @@ if (isElectron) {
 // ═══════════════════════════════════════════
 const NB_STORAGE_KEY = 'cliplearn_notebooks';
 const NB_ACTIVE_KEY = 'cliplearn_active_notebook';
-const CARD_MAX_WORDS = 80;
 
 let notebooks = {};
 let activeNotebook = 'english';
@@ -412,22 +475,24 @@ function currentNb() {
 function nbCardCount() { return (currentNb().cards || []).length; }
 
 function appendTextToCurrentCard(eng, chn, rid) {
-    const words = eng.trim().split(/\s+/);
-    const truncated = words.length > CARD_MAX_WORDS ? words.slice(0, CARD_MAX_WORDS).join(' ') : eng;
+    // 容量检查：截图前由 submitScreenshot 做，此处做追加时的安全网
+    if (!checkNotebookLimit(activeNotebook)) {
+        showUpgradeWall();
+        return false;
+    }
     const nb = currentNb();
     if (!nb.cards) nb.cards = [];
     const last = nb.cards.length > 0 ? nb.cards[nb.cards.length - 1] : null;
-    const lastWords = last ? (last.entries || []).reduce((s, e) => s + (e.en||'').split(/\s+/).length, 0) : 0;
-    const newWords = truncated.split(/\s+/).length;
-    if (!last || (lastWords > 0 && lastWords + newWords > CARD_MAX_WORDS)) {
-        nb.cards.push({ num: nb.cards.length + 1, entries: [{ en: truncated, zh: chn, rid: rid }], created_at: Date.now() / 1000 });
+    if (!last) {
+        nb.cards.push({ num: 1, entries: [{ en: eng, zh: chn, rid: rid }], created_at: Date.now() / 1000 });
     } else {
         if (!last.entries) last.entries = [];
-        last.entries.push({ en: truncated, zh: chn, rid: rid });
+        last.entries.push({ en: eng, zh: chn, rid: rid });
     }
     nb.currentCardIdx = nb.cards.length;
     saveNotebooks();
     rebuildCardStack();
+    return true;
 }
 
 // ═══════════════════════════════════════════
@@ -869,6 +934,17 @@ document.getElementById('btn-delete-card').addEventListener('click', deleteCurre
 // 6. Screenshot → OCR → Translate → TTS
 // ═══════════════════════════════════════════
 function submitScreenshot(dataUrl) {
+    // 容量预检
+    if (!checkNotebookLimit(activeNotebook)) {
+        if (userState.tier === 'free') showRegistrationWall();
+        else showPaymentWall();
+        return;
+    }
+    // Token 预检：免费用户 Token 耗尽 → 弹注册墙
+    if (userState.tier === 'free' && tokenRemaining <= 0) {
+        showRegistrationWall();
+        return;
+    }
     viewStatus.innerText = 'CLIPPING...';
     fetch(dataUrl).then(r => r.blob()).then(blob => {
         const fd = new FormData();
@@ -876,10 +952,19 @@ function submitScreenshot(dataUrl) {
         fd.append('route', document.getElementById('course-route').value);
         return fetch('/api/process', { method: 'POST', body: fd });
     }).then(async res => {
-        if (res.status === 402) { triggerRechargeUI(); throw new Error('TOKEN_EXCEEDED'); }
+        // 同步 Token 余额
+        const tok = res.headers.get('X-Token-Remaining');
+        if (tok !== null && tok !== undefined) {
+            tokenRemaining = parseInt(tok, 10) || 0;
+            updateTokenDisplay();
+        }
+        if (res.status === 402) {
+            tokenRemaining = 0; updateTokenDisplay();
+            showRegistrationWall(); throw new Error('TOKEN_EXCEEDED');
+        }
         if (res.status === 409) {
             const d = await res.json();
-            if (d.tier === 'paid') triggerPaidUpgradeUI(d); else triggerFreeUpgradeUI(d);
+            if (d.tier === 'paid') showPaymentWall(); else showRegistrationWall();
             throw new Error('CARD_LIMIT');
         }
         if (!res.ok) {
@@ -906,26 +991,38 @@ function submitScreenshot(dataUrl) {
     });
 }
 
-function triggerFreeUpgradeUI(data) {
+// 弹窗：未注册 → 要求注册
+function showRegistrationWall() {
     stopAudio();
-    document.getElementById('card-stack').innerHTML = '<div style="text-align:center;padding:50px 28px;color:#e5e2e1;"><div style="width:70px;height:70px;border:4px solid #116cc7;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;"><span style="color:#116cc7;font-size:28px;font-weight:700;">100</span></div><p style="font-size:15px;margin-bottom:8px;font-weight:700;">免费版已达上限</p><p style="font-size:13px;color:#888;margin-bottom:20px;">' + (data.message||'请升级到网络版') + '</p><a href="'+(data.url||'https://www.cliplearn.ai')+'" target="_blank" style="background:#116cc7;color:#FFF;padding:10px 24px;border-radius:20px;text-decoration:none;font-weight:700;">前往 ClipLearn 网络版</a><p style="font-size:11px;color:#555;margin-top:12px;">1000 张卡片 · 多设备同步 · 云端备份</p></div>';
-    viewStatus.innerText = 'UPGRADE';
-}
-
-function triggerPaidUpgradeUI(data) {
-    stopAudio();
-    document.getElementById('card-stack').innerHTML = '<div style="text-align:center;padding:50px 28px;color:#e5e2e1;"><div style="width:70px;height:70px;border:4px solid #e5a100;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;"><span style="color:#e5a100;font-size:28px;font-weight:700;">200</span></div><p style="font-size:15px;margin-bottom:8px;font-weight:700;">离线版已达上限</p><p style="font-size:13px;color:#888;margin-bottom:20px;">' + (data.message||'请升级至付费版以解锁更多容量') + '</p><a href="'+(data.url||'https://www.cliplearn.ai/pricing')+'" target="_blank" style="background:#e5a100;color:#FFF;padding:10px 24px;border-radius:20px;text-decoration:none;font-weight:700;">升级至付费版</a><p style="font-size:11px;color:#555;margin-top:12px;">无限卡片 · 多设备同步 · 云端备份</p></div>';
-    viewStatus.innerText = 'UPGRADE';
-}
-
-function triggerRechargeUI() {
-    stopAudio();
-    document.getElementById('card-stack').innerHTML = '<div style="text-align:center;padding:40px 24px;color:#e5e2e1;"><div style="width:70px;height:70px;border:4px solid #116cc7;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;animation:pulse 2s infinite;"><span style="color:#116cc7;font-size:24px;font-weight:700;">智</span></div><p style="font-size:15px;margin-bottom:6px;font-weight:700;">一星期无感缓冲期已满</p><p style="font-size:13px;color:#666;line-height:1.5;">系统已为您在本地提纯大量语言资产，现在需要补充能量。</p><button id="btn-recharge" style="background:#116cc7;border:none;color:#FFF;padding:10px 20px;border-radius:20px;font-weight:700;cursor:pointer;margin-top:15px;width:100%;">激活 (续期)</button></div>';
-    document.getElementById('btn-recharge').onclick = () => {
-        fetch('/api/recharge', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({amount:5000}) })
-            .then(r => r.json()).then(d => { if(d.status==='ok') location.reload(); });
+    const nbName = nbLabel(activeNotebook);
+    document.getElementById('card-stack').innerHTML = '<div style="text-align:center;padding:50px 28px;color:#e5e2e1;"><div style="width:70px;height:70px;border:4px solid #116cc7;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;"><span style="color:#116cc7;font-size:28px;font-weight:700;">' + FREE_LIMIT + '</span></div><p style="font-size:16px;margin-bottom:4px;font-weight:700;">免费版已达上限</p><p style="font-size:13px;color:#888;line-height:1.5;margin-bottom:16px;">笔记本「' + nbName + '」已存 ' + notebookCardCount(activeNotebook) + ' 张卡片<br/>免费用户每个笔记本最多 ' + FREE_LIMIT + ' 张</p><button id="btn-register-now" style="background:#116cc7;border:none;color:#FFF;padding:12px 28px;border-radius:20px;font-weight:700;cursor:pointer;font-size:14px;width:80%;">注册</button><p style="font-size:11px;color:#555;margin-top:12px;">不注册将无法继续使用 ClipLearn</p></div>';
+    document.getElementById('btn-register-now').onclick = () => {
+        userState.tier = 'registered';
+        userState.registered = true;
+        saveUser();
+        updateLoginButton();
+        rebuildCardStack();
+        showToast('已注册！每个笔记本可存 ' + REGISTERED_LIMIT + ' 张卡片，按 Token 消耗计费');
     };
+    viewStatus.innerText = 'REGISTER REQUIRED';
 }
+
+// 弹窗：已注册但达到上限 → 要求付费
+function showPaymentWall() {
+    stopAudio();
+    const nbName = nbLabel(activeNotebook);
+    document.getElementById('card-stack').innerHTML = '<div style="text-align:center;padding:50px 28px;color:#e5e2e1;"><div style="width:70px;height:70px;border:4px solid #e5a100;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;"><span style="color:#e5a100;font-size:28px;font-weight:700;">' + REGISTERED_LIMIT + '</span></div><p style="font-size:16px;margin-bottom:4px;font-weight:700;">注册版已达上限</p><p style="font-size:13px;color:#888;line-height:1.5;margin-bottom:16px;">笔记本「' + nbName + '」已存 ' + notebookCardCount(activeNotebook) + ' 张卡片<br/>注册用户每个笔记本最多 ' + REGISTERED_LIMIT + ' 张<br/>继续使用请充值 Token</p><a href="https://www.cliplearn.ai/pricing" target="_blank" style="display:inline-block;background:#e5a100;color:#FFF;padding:12px 28px;border-radius:20px;text-decoration:none;font-weight:700;font-size:14px;width:80%;box-sizing:border-box;">升级至付费版（无限卡片）</a><p style="font-size:11px;color:#555;margin-top:12px;">不充值将无法继续使用 ClipLearn</p></div>';
+    viewStatus.innerText = 'PAYMENT REQUIRED';
+}
+
+// 向上兼容：后端返回 409 时也调用新弹窗
+function showUpgradeWall() {
+    if (userState.tier === 'free') showRegistrationWall();
+    else showPaymentWall();
+}
+function triggerFreeUpgradeUI(data) { showRegistrationWall(); }
+function triggerPaidUpgradeUI(data) { showPaymentWall(); }
+function triggerRechargeUI() { showRegistrationWall(); }
 
 // ═══════════════════════════════════════════
 // 7. Settings Panel
@@ -943,10 +1040,33 @@ btnSettings.addEventListener('click', openSettings);
 btnSettingsClose.addEventListener('click', closeSettings);
 
 document.getElementById('btn-login').addEventListener('click', function() {
-    const active = this.classList.toggle('logged-in');
-    this.textContent = active ? '已登录 ✓' : '登录 / 注册';
-    this.style.color = active ? '#4ade80' : '';
+    if (userState.tier === 'paid') return;
+    if (userState.tier === 'registered') {
+        this.textContent = '已注册 ✓';
+        return;
+    }
+    // Free → Registered
+    userState.tier = 'registered';
+    userState.registered = true;
+    saveUser();
+    this.textContent = '已注册 ✓';
+    this.style.color = '#4ade80';
+    showToast('已注册！每个笔记本可存 ' + REGISTERED_LIMIT + ' 张卡片，按 Token 消耗计费');
 });
+
+function updateLoginButton() {
+    const btn = document.getElementById('btn-login');
+    if (userState.tier === 'paid') {
+        btn.textContent = '已付费 ✓';
+        btn.style.color = '#4ade80';
+    } else if (userState.tier === 'registered') {
+        btn.textContent = '已注册 ✓';
+        btn.style.color = '#4ade80';
+    } else {
+        btn.textContent = '登录 / 注册';
+        btn.style.color = '';
+    }
+}
 
 document.getElementById('btn-rename').addEventListener('click', () => {
     const n = document.getElementById('rename-input').value.trim();
@@ -986,6 +1106,9 @@ function showToast(msg) {
 // ═══════════════════════════════════════════
 // 8. Init
 // ═══════════════════════════════════════════
+loadUser();
+updateLoginButton();
+fetchTokenStatus();
 loadAll();
 hubDropdownMenu.querySelectorAll('.dropdown-item').forEach(item => {
     item.textContent = nbLabel(item.getAttribute('data-nb'));
