@@ -233,6 +233,23 @@ def _add_pauses(text):
     return text
 
 
+def _parse_card_txt(txt_path):
+    """解析删除卡片时生成的文本文件，提取 English / Chinese 段。"""
+    english, chinese = "", ""
+    try:
+        with open(txt_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        m_en = re.search(r'English:\s*\n(.*?)(?:\n\s*\nChinese:|\Z)', content, re.S)
+        m_zh = re.search(r'Chinese:\s*\n(.*)\Z', content, re.S)
+        if m_en:
+            english = m_en.group(1).strip()
+        if m_zh:
+            chinese = m_zh.group(1).strip()
+    except Exception:
+        pass
+    return english, chinese
+
+
 # ═══════════════════════════════════════════
 # 翻译函数
 # ═══════════════════════════════════════════
@@ -735,6 +752,63 @@ def register_routes(app):
         conn.commit()
         conn.close()
         return jsonify({"status": "ok", "message": "已永久删除"})
+
+    @app.route("/api/restored", methods=['GET'])
+    def list_restored():
+        """检测从 Windows 回收站还原回 clip_audios 的卡片。
+        删除卡片时会生成 <rid>.txt 并随音频一起送入回收站，正常卡片没有 .txt；
+        因此 clip_audios 中重新出现的 <rid>.txt 即为被还原的记录。
+        解析文本 → 回迁数据库(trash→active) → 删除标志文件 → 返回还原列表。
+        """
+        restored = []
+        try:
+            if not os.path.isdir(AUDIO_DIR):
+                return jsonify(restored)
+            for fname in os.listdir(AUDIO_DIR):
+                if not fname.endswith(".txt"):
+                    continue
+                rid = fname[:-4]
+                txt_path = os.path.join(AUDIO_DIR, fname)
+                mp3_path = os.path.join(AUDIO_DIR, "{}.mp3".format(rid))
+                # 音频未一同还原则跳过（无法播放）
+                if not os.path.exists(mp3_path):
+                    continue
+
+                english, chinese = _parse_card_txt(txt_path)
+
+                # 数据库回迁：trash_records -> active_records
+                try:
+                    conn = get_db_connection()
+                    row = conn.execute(
+                        "SELECT * FROM trash_records WHERE id=?", (rid,)
+                    ).fetchone()
+                    created_at = row["created_at"] if row else time.time()
+                    if row:
+                        if not english:
+                            english = row["english"]
+                        if not chinese:
+                            chinese = row["chinese"]
+                    conn.execute(
+                        "INSERT OR REPLACE INTO active_records "
+                        "(id, english, chinese, audio_path, created_at) VALUES (?, ?, ?, ?, ?)",
+                        (rid, english, chinese, mp3_path, created_at)
+                    )
+                    conn.execute("DELETE FROM trash_records WHERE id=?", (rid,))
+                    conn.commit()
+                    conn.close()
+                except Exception:
+                    pass
+
+                restored.append({"id": rid, "english": english, "chinese": chinese})
+
+                # 删除标志文件，避免下次重复检测
+                try:
+                    os.remove(txt_path)
+                except OSError:
+                    pass
+        except Exception as e:
+            return jsonify({"error": str(e), "restored": []}), 500
+        return jsonify(restored)
 
     # ── 6. 充值与状态 ──
     @app.route("/api/recharge", methods=['POST'])

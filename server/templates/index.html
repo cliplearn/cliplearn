@@ -66,11 +66,13 @@
         .card-container { position: relative; width: 100%; height: 100%; perspective: 1000px; }
         .learning-card {
             position: absolute; inset: 0; display: none; flex-direction: column;
-            align-items: center; justify-content: center; padding: 24px; text-align: center;
+            justify-content: flex-start; padding: 0; text-align: left;
             background: #131313; z-index: 10; overflow: hidden;
             transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease;
         }
         .learning-card.active { display: flex; z-index: 20; }
+        .cover-intro { justify-content: center; align-items: center; text-align: center; padding: 24px; }
+        .card-content { padding: 0; justify-content: flex-start; align-items: stretch; text-align: left; }
         .slide-out-right { animation: slideOutRight 0.5s forwards; }
         .slide-in-left { animation: slideInLeft 0.5s forwards; }
         .slide-out-left { animation: slideOutLeft 0.5s forwards; }
@@ -92,10 +94,22 @@
         .dropdown-item.current { color: #00daf3; font-weight: 700; }
 
         /* Audio word highlight */
-        .entry-line { transition: background-color 0.15s; border: 1px solid transparent; padding: 6px 8px; border-radius: 0; }
+        .entry-line { position: relative; transition: background-color 0.15s; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); margin-bottom: 2px; }
         .entry-line.playing-entry { background-color: rgba(0,218,243,0.12); }
-        .entry-en { font-size: 14px; color: #9fcaff; font-weight: 600; line-height: 1.4; }
-        .entry-zh { font-size: 12px; color: #89919e; margin-top: 4px; line-height: 1.35; }
+        .entry-en { font-size: 15px; color: #9fcaff; font-weight: 600; line-height: 1.5; word-wrap: break-word; }
+        .entry-zh { font-size: 13px; color: #89919e; margin-top: 5px; line-height: 1.5; word-wrap: break-word; }
+        .entry-word {
+            display: inline;
+            border-radius: 3px;
+            padding: 1px 2px;
+            margin: 0 1px;
+            transition: background-color 0.12s, box-shadow 0.12s, color 0.12s;
+        }
+        .entry-word.active {
+            background-color: #0B78F0;
+            color: #FFFFFF;
+            box-shadow: 0 0 12px rgba(11,120,240,0.5);
+        }
 
         /* Search */
         .search-result-item { padding: 10px 16px; border-bottom: 1px solid #2a2a2a; cursor: pointer; transition: background-color 0.15s; }
@@ -103,9 +117,20 @@
         .search-result-highlight { background-color: rgba(0, 218, 243, 0.2); color: #00daf3; }
 
         /* Selection */
-        .selection-active .record-actions { display: flex; }
         .record-actions { display: none; }
-        .selection-active .entry-line { border-color: #2a2a2a; }
+        .rec-del, .rec-arc {
+            position: absolute; width: 20px; height: 20px; padding: 0;
+            align-items: center; justify-content: center;
+            border: none; background: transparent; cursor: pointer;
+            font-size: 15px; font-weight: 800; line-height: 1; border-radius: 50%;
+            transition: transform 0.12s, background-color 0.12s; z-index: 5;
+        }
+        .rec-del { top: 4px; left: -4px; color: #ff5b5b; }
+        .rec-arc { bottom: 4px; right: -4px; color: #2f86ff; }
+        .rec-del:hover { background-color: rgba(255,91,91,0.18); transform: scale(1.15); }
+        .rec-arc:hover { background-color: rgba(47,134,255,0.18); transform: scale(1.15); }
+        .selection-active .record-actions { display: flex; }
+        .selection-active .entry-line { padding-left: 22px; padding-right: 22px; border-color: #2a2a2a; }
         .selection-active .entry-line:hover { background-color: #201f1f; border-color: #353534; }
 
         #toast {
@@ -229,7 +254,7 @@
                     <div class="dropdown-item" data-nb="notebook8">8 Notebook Ctrl+Shift+8</div>
                     <div class="dropdown-item" data-nb="notebook9">9 Notebook Ctrl+Shift+9</div>
                     <div class="dropdown-item" data-nb="notebook10">10 Notebook Ctrl+Shift+0</div>
-                    <div class="dropdown-item" data-nb="notebook11">11 Notebook Ctrl+Shift+11</div>
+                    <div class="dropdown-item" data-nb="notebook11">存档</div>
                 </div>
             </div>
             <div id="hub-middle" class="flex-1 flex items-center justify-center mx-2 h-full relative">
@@ -248,7 +273,7 @@
 <div class="flex-1 relative overflow-hidden bg-background">
 
     <!-- Card Stack (max-w-lg constrained) -->
-    <main class="h-full max-w-lg mx-auto relative overflow-hidden">
+    <main class="h-full w-full relative overflow-hidden">
         <div class="card-container" id="card-stack"></div>
         <div id="toast"></div>
         <div class="absolute bottom-20 left-6 flex items-center gap-2 z-30" id="ready-indicator" style="opacity:1;pointer-events:auto;">
@@ -449,6 +474,7 @@ function nbLabel(key) {
     if (nbCustomNames[key]) return nbCustomNames[key];
     if (key === 'english') return '中↔英 Ctrl+Shift+C';
     if (key === 'chinese') return 'TOTAL';
+    if (key === 'notebook11') return '存档';
     const num = key.replace('notebook', '');
     return num + ' Notebook Ctrl+Shift+' + (num === '10' ? '0' : num);
 }
@@ -474,21 +500,55 @@ function currentNb() {
 }
 function nbCardCount() { return (currentNb().cards || []).length; }
 
+// 卡片内容区上下预留：mt-9(36px) 顶部 + 底部页码/日期与留白
+const CARD_TOP_RESERVE = 36;
+const CARD_BOTTOM_RESERVE = 30;
+
+// 隐藏的测量容器：用与卡片内容区完全一致的宽度与样式，离屏测量真实渲染高度
+let _measureEl = null;
+function getMeasureEl() {
+    if (_measureEl) return _measureEl;
+    _measureEl = document.createElement('div');
+    _measureEl.className = 'px-[14px]';
+    _measureEl.style.cssText = 'position:absolute;left:-99999px;top:0;visibility:hidden;pointer-events:none;box-sizing:border-box;';
+    document.body.appendChild(_measureEl);
+    return _measureEl;
+}
+
+// 判断「给定的若干条记录」整体渲染后是否能装进一张卡片（不溢出、无需滚动）
+function entriesFitInCard(entries) {
+    const stack = document.getElementById('card-stack');
+    const w = stack.clientWidth || 360;
+    const h = stack.clientHeight || 600;
+    const maxH = h - CARD_TOP_RESERVE - CARD_BOTTOM_RESERVE;
+    const m = getMeasureEl();
+    m.style.width = w + 'px';
+    m.innerHTML = entries.map((e, i) => entryInnerHTML(e, i)).join('');
+    return m.scrollHeight <= maxH;
+}
+
+// 通用：把一条记录按分页规则追加到指定笔记本（所有笔记本规则一致）
+// 当前卡片已有内容且追加后仍能完整装下 → 追加到同一张卡片；
+// 否则把这条完整的中英记录整体放到下一张卡片（绝不跨页拆分）。
+function appendEntryToNotebook(nbKey, entry) {
+    if (!notebooks[nbKey]) notebooks[nbKey] = { cards: [], currentCardIdx: 0 };
+    const nb = notebooks[nbKey];
+    if (!nb.cards) nb.cards = [];
+    const last = nb.cards.length > 0 ? nb.cards[nb.cards.length - 1] : null;
+    if (last && last.entries && last.entries.length > 0 && entriesFitInCard(last.entries.concat([entry]))) {
+        last.entries.push(entry);
+    } else {
+        nb.cards.push({ num: nb.cards.length + 1, entries: [entry], created_at: Date.now() / 1000 });
+    }
+    return nb;
+}
+
 function appendTextToCurrentCard(eng, chn, rid) {
-    // 容量检查：截图前由 submitScreenshot 做，此处做追加时的安全网
     if (!checkNotebookLimit(activeNotebook)) {
         showUpgradeWall();
         return false;
     }
-    const nb = currentNb();
-    if (!nb.cards) nb.cards = [];
-    const last = nb.cards.length > 0 ? nb.cards[nb.cards.length - 1] : null;
-    if (!last) {
-        nb.cards.push({ num: 1, entries: [{ en: eng, zh: chn, rid: rid }], created_at: Date.now() / 1000 });
-    } else {
-        if (!last.entries) last.entries = [];
-        last.entries.push({ en: eng, zh: chn, rid: rid });
-    }
+    const nb = appendEntryToNotebook(activeNotebook, { en: eng, zh: chn, rid: rid });
     nb.currentCardIdx = nb.cards.length;
     saveNotebooks();
     rebuildCardStack();
@@ -618,6 +678,7 @@ function switchNotebook(nbKey) {
     notebooks[activeNotebook].currentCardIdx = Math.min(notebooks[activeNotebook].currentCardIdx || 0, nbCardCount());
     stopAudio();
     rebuildCardStack();
+    if (activeNotebook === 'notebook11') importRestoredToArchive();
 }
 
 // ═══════════════════════════════════════════
@@ -629,7 +690,7 @@ function makeCoverHTML(nbKey) {
     const isEnglish = nbKey === 'english';
     const isTotal = nbKey === 'chinese';
     if (isTotal) {
-        return `<section class="learning-card active" id="card-0">
+        return `<section class="learning-card active cover-intro" id="card-0">
           <div class="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center opacity-10"><div class="w-[200px] h-[200px] bg-secondary-fixed-dim rounded-full blur-[100px]"></div></div>
           <div class="z-10 flex flex-col space-y-stack-lg max-w-lg">
             <section class="space-y-stack-sm">
@@ -643,7 +704,7 @@ function makeCoverHTML(nbKey) {
           </div></section>`;
     }
     if (isEnglish) {
-        return `<section class="learning-card active" id="card-0">
+        return `<section class="learning-card active cover-intro" id="card-0">
           <div class="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center opacity-10"><div class="w-[200px] h-[200px] bg-secondary-fixed-dim rounded-full blur-[100px]"></div></div>
           <div class="z-10 flex flex-col space-y-stack-lg max-w-lg">
             <section class="space-y-stack-sm">
@@ -657,7 +718,7 @@ function makeCoverHTML(nbKey) {
           </div></section>`;
     }
     const nbName = nbLabel(nbKey);
-    return `<section class="learning-card active" id="card-0">
+    return `<section class="learning-card active cover-intro" id="card-0">
       <div class="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center opacity-10"><div class="w-[200px] h-[200px] bg-secondary-fixed-dim rounded-full blur-[100px]"></div></div>
       <div class="z-10 flex flex-col space-y-stack-lg max-w-lg">
         <section class="space-y-stack-sm">
@@ -671,19 +732,26 @@ function makeCoverHTML(nbKey) {
       </div></section>`;
 }
 
+function entryInnerHTML(e, ei) {
+    const wordSpans = (e.en || '').split(/\s+/).map(w => `<span class="entry-word">${escHtml(w)}</span>`).join(' ');
+    return `<div class="entry-line" data-entry-index="${ei}">
+          <button class="record-actions rec-del" data-entry-index="${ei}" title="删除此条记录">✕</button>
+          <div class="entry-en">${wordSpans}</div>
+          ${e.zh ? `<div class="entry-zh">${escHtml(e.zh)}</div>` : ''}
+          <button class="record-actions rec-arc" data-entry-index="${ei}" title="存档此条记录">✓</button>
+        </div>`;
+}
+
 function cardHTML(card, cardNum) {
     const numStr = String(cardNum).padStart(2, '0');
     const timeStr = card.created_at ? new Date(card.created_at * 1000).toLocaleDateString('zh-CN') : '';
-    let entriesHTML = '';
-    (card.entries || []).forEach((e, ei) => {
-        entriesHTML += `<div class="entry-line" data-entry-index="${ei}">
-          <div class="entry-en">${escHtml(e.en)}</div>
-          ${e.zh ? `<div class="entry-zh">${escHtml(e.zh)}</div>` : ''}
-        </div>`;
-    });
-    return `<span class="absolute top-6 right-6 font-label-md text-secondary-fixed-dim opacity-50 text-[13px]">${numStr}</span>
-      <div class="w-full max-w-xs text-left">${entriesHTML}</div>
-      ${timeStr ? `<div class="absolute bottom-16 right-6 opacity-30 font-label-md text-[11px]">${timeStr}</div>` : ''}`;
+    const entriesHTML = (card.entries || []).map((e, ei) => entryInnerHTML(e, ei)).join('');
+    return `
+      <div class="absolute top-3 right-2 font-label-md text-secondary-fixed-dim opacity-50 text-[13px]">${numStr}</div>
+      <div class="w-full mt-9 px-[14px]">
+        ${entriesHTML}
+      </div>
+      ${timeStr ? `<div class="absolute bottom-3 right-2 opacity-25 font-label-md text-[10px]">${timeStr}</div>` : ''}`;
 }
 
 function rebuildCardStack() {
@@ -695,7 +763,7 @@ function rebuildCardStack() {
     cards.forEach((card, ci) => {
         const cardNum = ci + 1;
         const sec = document.createElement('section');
-        sec.className = 'learning-card';
+        sec.className = 'learning-card card-content';
         sec.id = 'card-' + cardNum;
         sec.innerHTML = cardHTML(card, cardNum);
         stack.appendChild(sec);
@@ -712,6 +780,9 @@ function rebuildCardStack() {
 let audioFemale = null, audioMale = null;
 let repeatCount = 0, isPlaying = false;
 let currentEntryIndex = -1;
+let wordHighlightTimer = null;
+let currentWordSpans = [];     // 当前播放段落的词 span 列表
+let currentWordCount = 0;       // 当前段落的词数
 const PAUSE_MS = 2000;
 const VOICE_LABELS = ['', '♀', '♂', '♀'];
 
@@ -732,16 +803,37 @@ function preloadLastEntryAudio() {
     audioMale.load();
 }
 
+function clearWordHighlight() {
+    currentWordSpans.forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.entry-word').forEach(s => s.classList.remove('active'));
+}
+
+function startWordTracking() {
+    const a = getCurrentAudio();
+    if (!a || currentWordCount === 0) return;
+    function tick() {
+        const cur = getCurrentAudio();
+        if (!cur || cur.paused) { wordHighlightTimer = requestAnimationFrame(tick); return; }
+        const progress = Math.min((cur.currentTime / cur.duration) + 0.02, 1.0);
+        const idx = Math.min(Math.floor(progress * currentWordCount), currentWordCount - 1);
+        currentWordSpans.forEach((s, i) => s.classList.toggle('active', i === idx));
+        wordHighlightTimer = requestAnimationFrame(tick);
+    }
+    cancelAnimationFrame(wordHighlightTimer);
+    tick();
+}
+
+function stopWordTracking() {
+    cancelAnimationFrame(wordHighlightTimer);
+    clearWordHighlight();
+}
+
 function highlightEntry(cardIdx, entryIdx) {
     const cardEl = document.getElementById('card-' + (cardIdx + 1));
     if (!cardEl) return;
     cardEl.querySelectorAll('.entry-line').forEach(el => el.classList.remove('playing-entry'));
     const entryEl = cardEl.querySelector('.entry-line[data-entry-index="' + entryIdx + '"]');
     if (entryEl) entryEl.classList.add('playing-entry');
-}
-
-function clearEntryHighlight() {
-    document.querySelectorAll('.entry-line').forEach(el => el.classList.remove('playing-entry'));
 }
 
 function playEntryInCurrentCard(entryIdx) {
@@ -760,10 +852,23 @@ function startAudioSequence(audioUrlFemale, recordId, cardIdx, entryIdx) {
     stopAudio();
     currentEntryIndex = entryIdx;
     highlightEntry(cardIdx, entryIdx);
+
+    // 收集当前段落的词 span
+    const cardEl = document.getElementById('card-' + (cardIdx + 1));
+    if (cardEl) {
+        const entryEl = cardEl.querySelector('.entry-line[data-entry-index="' + entryIdx + '"]');
+        if (entryEl) {
+            currentWordSpans = Array.from(entryEl.querySelectorAll('.entry-word'));
+            currentWordCount = currentWordSpans.length;
+        }
+    }
+
     audioFemale = new Audio(audioUrlFemale);
     audioFemale.addEventListener('ended', onAudioEnded);
+    audioFemale.addEventListener('play', startWordTracking);
     audioMale = new Audio('/api/audio/' + recordId + '/male');
     audioMale.addEventListener('ended', onAudioEnded);
+    audioMale.addEventListener('play', startWordTracking);
     audioMale.load();
     repeatCount = 0;
     isPlaying = true;
@@ -772,7 +877,7 @@ function startAudioSequence(audioUrlFemale, recordId, cardIdx, entryIdx) {
 }
 
 function onAudioEnded() {
-    clearEntryHighlight();
+    stopWordTracking();
     repeatCount++;
     if (repeatCount < 3) {
         const voice = VOICE_LABELS[repeatCount + 1];
@@ -783,11 +888,10 @@ function onAudioEnded() {
             if (!a) return;
             a.currentTime = 0;
             viewStatus.innerText = 'PLAYING [' + (repeatCount + 1) + '/3] ' + voice;
-            a.play();
             if (currentEntryIndex >= 0) {
-                const nb = currentNb();
                 highlightEntry(arrayIndex - 1, currentEntryIndex);
             }
+            a.play();
         }, PAUSE_MS);
     } else {
         viewStatus.innerText = 'LISTEN DONE ✓';
@@ -807,13 +911,23 @@ function playChime() {
 }
 
 function stopAudio() {
-    [audioFemale, audioMale].forEach(a => { if (!a) return; a.pause(); a.currentTime = 0; a.removeEventListener('ended', onAudioEnded); });
+    [audioFemale, audioMale].forEach(a => { if (!a) return; a.pause(); a.currentTime = 0; a.removeEventListener('ended', onAudioEnded); a.removeEventListener('play', startWordTracking); });
     audioFemale = null; audioMale = null; isPlaying = false; repeatCount = 0;
-    clearEntryHighlight();
+    stopWordTracking();
+    document.querySelectorAll('.entry-line').forEach(el => el.classList.remove('playing-entry'));
 }
 
-// Card click → play entry
+// Card click → play entry（选择模式下：✕ 删除 / ✓ 存档）
 document.getElementById('card-stack').addEventListener('click', (e) => {
+    const actBtn = e.target.closest('.rec-del, .rec-arc');
+    if (actBtn) {
+        e.stopPropagation();
+        const ei = parseInt(actBtn.getAttribute('data-entry-index'), 10);
+        if (isNaN(ei)) return;
+        if (actBtn.classList.contains('rec-del')) deleteEntry(ei);
+        else archiveEntry(ei);
+        return;
+    }
     const entryEl = e.target.closest('.entry-line');
     if (!entryEl) return;
     const entryIdx = parseInt(entryEl.getAttribute('data-entry-index'), 10);
@@ -929,6 +1043,93 @@ function deleteCurrentCard() {
 }
 
 document.getElementById('btn-delete-card').addEventListener('click', deleteCurrentCard);
+
+// 取当前正在显示的卡片在 cards 数组中的下标（封面页返回 null）
+function currentCardIndex() {
+    if (arrayIndex === 0) return null;
+    const nb = currentNb();
+    const cardIdx = arrayIndex - 1;
+    if (!nb.cards || cardIdx >= nb.cards.length) return null;
+    return cardIdx;
+}
+
+// 卡片删空后移除该卡片并修正当前页索引
+function removeCardIfEmpty(nb, cardIdx) {
+    const card = nb.cards[cardIdx];
+    if (card.entries && card.entries.length > 0) return false;
+    nb.cards.splice(cardIdx, 1);
+    if (arrayIndex > nb.cards.length) arrayIndex = nb.cards.length;
+    nb.currentCardIdx = arrayIndex;
+    return true;
+}
+
+// ✕ 删除单条记录 → Windows 回收站
+function deleteEntry(entryIdx) {
+    const cardIdx = currentCardIndex();
+    if (cardIdx === null) return;
+    const nb = currentNb();
+    const card = nb.cards[cardIdx];
+    if (!card.entries || entryIdx < 0 || entryIdx >= card.entries.length) return;
+    stopAudio();
+    const entry = card.entries[entryIdx];
+    if (entry.rid) fetch('/api/recycle/' + entry.rid, { method: 'DELETE' }).catch(() => {});
+    card.entries.splice(entryIdx, 1);
+    removeCardIfEmpty(nb, cardIdx);
+    nb.currentCardIdx = arrayIndex;
+    saveNotebooks();
+    rebuildCardStack();
+    showToast('此条记录可以在回收站找回');
+}
+
+// ✓ 存档单条记录 → 移入「存档」笔记本
+function archiveEntry(entryIdx) {
+    const cardIdx = currentCardIndex();
+    if (cardIdx === null) return;
+    const nb = currentNb();
+    const card = nb.cards[cardIdx];
+    if (!card.entries || entryIdx < 0 || entryIdx >= card.entries.length) return;
+    if (activeNotebook === 'notebook11') { showToast('已在存档笔记本中'); return; }
+    stopAudio();
+    const entry = card.entries[entryIdx];
+    // 与「中↔英」相同的分页规则：累积进存档笔记本的当前卡片，满了才换页
+    appendEntryToNotebook('notebook11', { en: entry.en, zh: entry.zh, rid: entry.rid });
+    card.entries.splice(entryIdx, 1);
+    removeCardIfEmpty(nb, cardIdx);
+    nb.currentCardIdx = arrayIndex;
+    saveNotebooks();
+    rebuildCardStack();
+    showToast('此条记录可以在菜单栏切换笔记本中找回');
+}
+
+// 某笔记本是否已含有该 rid（防止重复导入）
+function notebookHasRid(nbKey, rid) {
+    const nb = notebooks[nbKey];
+    if (!nb || !nb.cards) return false;
+    return nb.cards.some(c => (c.entries || []).some(e => e.rid === rid));
+}
+
+// 从 Windows 回收站还原的项目 → 全部加入「存档」笔记本（分页规则一致）
+async function importRestoredToArchive() {
+    try {
+        const resp = await fetch('/api/restored');
+        if (!resp.ok) return;
+        const items = await resp.json();
+        if (!Array.isArray(items) || items.length === 0) return;
+        let added = 0;
+        items.forEach(it => {
+            if (!it || (!it.english && !it.chinese)) return;
+            if (it.id && notebookHasRid('notebook11', it.id)) return;
+            appendEntryToNotebook('notebook11', { en: it.english || '', zh: it.chinese || '', rid: it.id });
+            added++;
+        });
+        if (!added) return;
+        const arc = notebooks['notebook11'];
+        if (arc) arc.currentCardIdx = arc.cards.length;
+        saveNotebooks();
+        if (activeNotebook === 'notebook11') rebuildCardStack();
+        showToast(added + ' 条记录已从回收站还原到「存档」');
+    } catch (e) {}
+}
 
 // ═══════════════════════════════════════════
 // 6. Screenshot → OCR → Translate → TTS
@@ -1116,9 +1317,7 @@ hubDropdownMenu.querySelectorAll('.dropdown-item').forEach(item => {
 hubTitle.textContent = nbLabel(activeNotebook);
 updateSearchPlaceholder();
 rebuildCardStack();
-if (isElectron) {
-    window.electronAPI.onScreenshotCaptured((dataUrl) => { submitScreenshot(dataUrl); });
-}
+importRestoredToArchive();
 </script>
 </body>
 </html>
