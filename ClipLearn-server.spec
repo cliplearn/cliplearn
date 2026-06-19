@@ -45,6 +45,7 @@ a = Analysis(
         # 翻译
         'deep_translator',
         'deep_translator.google',
+        'deep_translator.mymemory',
         # TTS
         'edge_tts',
         'edge_tts.communicate',

@@ -114,7 +114,7 @@ from PIL import Image
 if os.name == 'nt' and _tesseract_path:
     pytesseract.pytesseract.tesseract_cmd = _tesseract_path
 
-from deep_translator import GoogleTranslator
+from deep_translator import GoogleTranslator, MyMemoryTranslator
 from send2trash import send2trash
 
 
@@ -276,18 +276,84 @@ def _translate_with_aws(text, source, target):
     return trans['TranslatedText'], trans.get('SourceLanguageCode', source)
 
 
+def _normalize_lang(code):
+    """统一语言代码供各翻译后端使用。"""
+    if not code or code == 'auto':
+        return code
+    if code.startswith('zh'):
+        return 'zh-CN'
+    if code.startswith('en'):
+        return 'en'
+    return code
+
+
+def _translate_google_free(text, src, tgt):
+    """使用 translate.googleapis.com（国内通常比 translate.google.com 更稳定）。"""
+    src = _normalize_lang(src)
+    tgt = _normalize_lang(tgt)
+    q = urllib.parse.quote(text)
+    url = (
+        "https://translate.googleapis.com/translate_a/single"
+        "?client=gtx&sl={}&tl={}&dt=t&q={}".format(src, tgt, q)
+    )
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        data = json.loads(resp.read().decode())
+    parts = data[0] if data else []
+    if not parts:
+        raise ValueError("empty translation")
+    return "".join(part[0] for part in parts if part and part[0])
+
+
+def _translate_mymemory(text, src, tgt):
+    """MyMemory 备用翻译（需 en-US / zh-CN 语言码）。"""
+    src = _normalize_lang(src)
+    tgt = _normalize_lang(tgt)
+    mm_src = 'zh-CN' if src.startswith('zh') else 'en-US'
+    mm_tgt = 'zh-CN' if tgt.startswith('zh') else 'en-US'
+    return MyMemoryTranslator(source=mm_src, target=mm_tgt).translate(text)
+
+
+def _translate_once(text, src, tgt, retries=1):
+    """依次尝试多个翻译后端，任一成功即返回。"""
+    src = _normalize_lang(src)
+    tgt = _normalize_lang(tgt)
+    providers = (
+        lambda: _translate_google_free(text, src, tgt),
+        lambda: GoogleTranslator(source=src, target=tgt).translate(text),
+        lambda: _translate_mymemory(text, src, tgt),
+    )
+    errors = []
+    for provider in providers:
+        for attempt in range(retries + 1):
+            try:
+                result = provider()
+                if result and str(result).strip():
+                    return str(result).strip()
+            except Exception as e:
+                errors.append(str(e))
+                if attempt < retries:
+                    time.sleep(0.5 * (attempt + 1))
+    raise RuntimeError(errors[-1] if errors else "translation failed")
+
+
 def _translate_offline(text, source, target):
-    """离线翻译: 仅支持 zh<->en，使用 deep-translator (Google Translate)"""
+    """离线翻译: 仅支持 zh<->en，使用 deep-translator (Google Translate)。
+    翻译服务不可用（断网/超时）时返回 (None, source) 供上层降级处理。"""
     if source == 'auto':
         source = 'zh' if is_mostly_chinese(text) else 'en'
     if source == target:
         return text, source
-    if source == 'zh' and target == 'en':
-        result = GoogleTranslator(source='zh-CN', target='en').translate(text)
-    elif source == 'en' and target == 'zh':
-        result = GoogleTranslator(source='en', target='zh-CN').translate(text)
-    else:
-        result = text
+    try:
+        if source == 'zh' and target == 'en':
+            result = _translate_once(text, 'zh-CN', 'en')
+        elif source == 'en' and target == 'zh':
+            result = _translate_once(text, 'en', 'zh-CN')
+        else:
+            result = text
+    except Exception as e:
+        print("[翻译] 服务不可用，降级处理: {}".format(e))
+        return None, source
     return result, source
 
 
@@ -538,15 +604,31 @@ def register_routes(app):
             else:
                 trans_result, detected = _translate_offline(extracted_text, "auto", target_lang)
 
-            if detected == target_lang:
+            if trans_result is None:
+                # 翻译服务不可用（断网/超时）→ 降级：保留原文，缺失的一侧留空
+                if is_mostly_chinese(extracted_text):
+                    english_text = ""
+                    chinese_text = extracted_text
+                else:
+                    english_text = extracted_text
+                    chinese_text = ""
+            elif detected == target_lang:
                 english_text = extracted_text
                 if aws_available:
                     chinese_text, _ = _translate_with_aws(extracted_text, target_lang, native_lang)
                 else:
                     chinese_text, _ = _translate_offline(extracted_text, target_lang, native_lang)
+                if chinese_text is None:
+                    chinese_text = ""
             else:
                 english_text = trans_result
                 chinese_text = extracted_text
+
+            # 无可朗读的英文（如中文原文且翻译失败）→ 返回友好提示，不再 500
+            if not english_text:
+                return jsonify({
+                    "error": "翻译服务暂时不可用（网络超时），请检查网络后重试"
+                }), 503
 
             # ---- 容量检查 ----
             active_count = count_active()
