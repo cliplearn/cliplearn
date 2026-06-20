@@ -290,7 +290,7 @@
         <div class="settings-panel-body">
             <div class="settings-row">
                 <span class="settings-label">账户</span>
-                <button id="btn-login" class="settings-action-btn login-btn">登录 / 注册</button>
+                <button id="btn-login" class="settings-action-btn login-btn" onclick="window.open('https://www.cliplearn.ai','_blank')">登录 / 注册</button>
             </div>
             <hr class="settings-divider"/>
             <!-- Token 状态 -->
@@ -1196,15 +1196,7 @@ function submitScreenshot(dataUrl) {
 function showRegistrationWall() {
     stopAudio();
     const nbName = nbLabel(activeNotebook);
-    document.getElementById('card-stack').innerHTML = '<div style="text-align:center;padding:50px 28px;color:#e5e2e1;"><div style="width:70px;height:70px;border:4px solid #116cc7;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;"><span style="color:#116cc7;font-size:28px;font-weight:700;">' + FREE_LIMIT + '</span></div><p style="font-size:16px;margin-bottom:4px;font-weight:700;">免费版已达上限</p><p style="font-size:13px;color:#888;line-height:1.5;margin-bottom:16px;">笔记本「' + nbName + '」已存 ' + notebookCardCount(activeNotebook) + ' 张卡片<br/>免费用户每个笔记本最多 ' + FREE_LIMIT + ' 张</p><button id="btn-register-now" style="background:#116cc7;border:none;color:#FFF;padding:12px 28px;border-radius:20px;font-weight:700;cursor:pointer;font-size:14px;width:80%;">注册</button><p style="font-size:11px;color:#555;margin-top:12px;">不注册将无法继续使用 ClipLearn</p></div>';
-    document.getElementById('btn-register-now').onclick = () => {
-        userState.tier = 'registered';
-        userState.registered = true;
-        saveUser();
-        updateLoginButton();
-        rebuildCardStack();
-        showToast('已注册！每个笔记本可存 ' + REGISTERED_LIMIT + ' 张卡片，按 Token 消耗计费');
-    };
+    document.getElementById('card-stack').innerHTML = '<div style="text-align:center;padding:50px 28px;color:#e5e2e1;"><div style="width:70px;height:70px;border:4px solid #116cc7;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;"><span style="color:#116cc7;font-size:28px;font-weight:700;">' + FREE_LIMIT + '</span></div><p style="font-size:16px;margin-bottom:4px;font-weight:700;">免费版已达上限</p><p style="font-size:13px;color:#888;line-height:1.5;margin-bottom:16px;">笔记本「' + nbName + '」已存 ' + notebookCardCount(activeNotebook) + ' 张卡片<br/>免费用户每个笔记本最多 ' + FREE_LIMIT + ' 张</p><a href="https://www.cliplearn.ai" target="_blank" style="display:inline-block;background:#116cc7;border:none;color:#FFF;padding:12px 28px;border-radius:20px;text-decoration:none;font-weight:700;font-size:14px;width:80%;box-sizing:border-box;">注册</a><p style="font-size:11px;color:#555;margin-top:12px;">不注册将无法继续使用 ClipLearn</p></div>';
     viewStatus.innerText = 'REGISTER REQUIRED';
 }
 
